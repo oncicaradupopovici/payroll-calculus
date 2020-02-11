@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 16
+VisualStudioVersion = 16.0.29613.14
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PayrollCalculus", "PayrollCalculus\PayrollCalculus.fsproj", "{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {A37D42DA-31C4-4649-9937-A886DAA1E574}
+	EndGlobalSection
+EndGlobal

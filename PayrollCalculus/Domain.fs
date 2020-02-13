@@ -22,6 +22,31 @@ module Effect =
     
         List.foldBack folder list initState
 
+
+//type StateResult<'s, 't> = StateResult of ('s -> Result<'t * 's, string>)
+//module StateResult =
+//    let run (StateResult x) : 's -> Result<'t * 's, string> = 
+//        x 
+//    let map (f: 't->'u) (m : StateResult<'s, 't>) : StateResult<'s,'u> = 
+//        StateResult (fun s -> Result.map (fun (a, s') -> (f a, s')) (run m s)) 
+//    let bind (f: 't-> StateResult<'s, 'u>) (m : StateResult<'s, 't>) : StateResult<'s, 'u> = 
+//        StateResult (fun s -> Result.bind (fun (a, s') -> run (f a) s') (run m s))
+//    let apply (StateResult f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
+//        StateResult (fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)) 
+
+
+type StateResult<'s, 't> = 's -> Result<'t * 's, string>
+module StateResult =
+    let run (x: StateResult<'s, 't>) : 's -> Result<'t * 's, string> = 
+        x 
+    let map (f: 't->'u) (m : StateResult<'s, 't>) : StateResult<'s,'u> = 
+        fun s -> Result.map (fun (a, s') -> (f a, s')) (run m s)
+    let bind (f: 't-> StateResult<'s, 'u>) (m : StateResult<'s, 't>) : StateResult<'s, 'u> = 
+        fun s -> Result.bind (fun (a, s') -> run (f a) s') (run m s)
+    let apply (f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
+        fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
+
+
 module Domain = 
     type ElemCode = ElemCode of string
 
@@ -93,7 +118,7 @@ module Domain =
                 let compiled = lambdaExpression.Compile();
                 let liftedDelegate = Elem.liftDelegate compiled
 
-                parameters |> Array.map (fun p -> processElem elemDefinitionCache p.Name
+                let results = parameters |> Array.map (fun p -> processElem elemDefinitionCache p.Name)
 
  
             match elemDefinition.Type with

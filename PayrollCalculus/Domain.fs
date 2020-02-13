@@ -46,6 +46,8 @@ module StateResult =
     let apply (f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
         fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
 
+    let retn x = fun s -> Result.Ok (x, s)
+
 
 module Domain = 
     type ElemCode = ElemCode of string
@@ -96,7 +98,9 @@ module Domain =
 
     type ElemValuesCache = Map<ElemCode, obj>
 
-    type ProcessElem  = ElemDefinitionCache -> ElemCode -> ElemCache -> Result<(Elem<obj> * ElemCache), string>
+    type ProcessElemResult = StateResult<ElemCache, Elem<obj>>
+
+    type ProcessElem  = ElemDefinitionCache -> ElemCode -> ProcessElemResult
 
 
 
@@ -105,12 +109,15 @@ module Domain =
 
 
     let rec processElem: ProcessElem = 
-        fun elemDefinitionCache elemCode elemCache ->
+        fun elemDefinitionCache elemCode ->
             let elemDefinition = elemDefinitionCache.TryFind elemCode
 
-            let processDataAccess table column = Elem (fun computationCtx -> Effect.pureEffect (Object()))
+            let processDataAccess table column : ProcessElemResult = 
+                let elem = Elem (fun computationCtx -> Effect.pureEffect (Object()))
+                fun (s:ElemCache) -> Result.Ok(elem, s.Add (elemCode,elem))
+            
 
-            let processFormula formula =
+            let processFormula formula : ProcessElemResult =
                 let parser = LambdaParser()
                 let expression = parser.Parse formula
                 let parameters = LambdaParser.GetExpressionParameters expression
@@ -118,12 +125,31 @@ module Domain =
                 let compiled = lambdaExpression.Compile();
                 let liftedDelegate = Elem.liftDelegate compiled
 
-                let results = parameters |> Array.map (fun p -> processElem elemDefinitionCache p.Name)
+                
 
- 
-            match elemDefinition.Type with
-                | DataAccess(table,column) -> processDataAccess table column
-                | Formula(formula, _) -> processFormula formula
+                let results = 
+                    parameters|> Array.map (fun p -> processElem elemDefinitionCache (ElemCode p.Name))
+
+                let folder =
+                    fun (current: ProcessElemResult) (acc: StateResult<ElemCache, Elem<obj> list>) ->
+                        acc |> StateResult.bind (fun elems -> current |> StateResult.map (fun elem -> elem :: elems))
+
+                let results' = Array.foldBack folder results (StateResult.retn [])
+
+                results' |> StateResult.bind 
+                    (fun paramElems -> 
+                        let resultElem = paramElems |> List.toArray |> liftedDelegate
+                        (fun s -> Result.Ok(resultElem, s.Add (elemCode,resultElem))))
+
+            
+            match elemDefinition with
+                | None -> (fun _-> Result.Error "could not find definition")
+                | Some elemDefinition -> 
+                    match elemDefinition.Type with
+                    | DataAccess(table,column) -> processDataAccess table column
+                    | Formula(formula, _) -> processFormula formula
+
+            
 
 
     //type ComputeElem<'T> = ElemCache -> ElemCode -> ComputationCtx -> ElemValuesCache -> 'T * ElemValuesCache

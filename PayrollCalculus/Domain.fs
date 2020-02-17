@@ -2,6 +2,7 @@
 
 open System
 open NReco.Linq
+open DynamicExpresso
 open System.Linq.Expressions
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
@@ -47,9 +48,9 @@ module StateResult =
         fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
 
     let retn x = fun s -> Result.Ok (x, s)
+   
 
-
-module Domain = 
+module Domain =    
     type ElemCode = ElemCode of string
 
     type ElemType = 
@@ -76,14 +77,15 @@ module Domain =
     type Elem<'T> = Elem of (ComputationCtx -> IEffect<'T>)
 
     module Elem = 
-        let liftDelegate (deleg: Delegate) = 
+        let liftDelegate (deleg: obj[] -> obj) = 
             fun ([<ParamArray>] arr: Elem<obj> array) ->
                 Elem (fun ctx ->
                         arr 
                             |> Array.map (fun (Elem fn) -> fn ctx)
                             |> Array.toList 
                             |> Effect.sequenceList 
-                            |> Effect.map (List.toArray >> (fun arr' -> deleg.DynamicInvoke arr'))
+                            //|> Effect.map (List.toArray >> (fun arr' -> deleg.DynamicInvoke arr'))
+                            |> Effect.map (List.toArray >> (fun arr' -> deleg arr'))
                     )
                 
 
@@ -113,20 +115,22 @@ module Domain =
             let elemDefinition = elemDefinitionCache.TryFind elemCode
 
             let processDataAccess table column : ProcessElemResult = 
-                let elem = Elem (fun computationCtx -> Effect.pureEffect (Object()))
+                let elem = Elem (fun computationCtx -> Effect.pureEffect (1 :> obj))
                 fun (s:ElemCache) -> Result.Ok(elem, s.Add (elemCode,elem))
             
 
-            let processFormula formula : ProcessElemResult =
-                let parser = LambdaParser()
-                let expression = parser.Parse formula
-                let parameters = LambdaParser.GetExpressionParameters expression
-                let lambdaExpression = Expression.Lambda(expression, parameters)
-                let compiled = lambdaExpression.Compile();
-                let liftedDelegate = Elem.liftDelegate compiled
+            let processFormula formula: ProcessElemResult =
+                //let parser = LambdaParser()
+                //let expression = parser.Parse formula
+                //let parameters = LambdaParser.GetExpressionParameters expression
+                //let lambdaExpression = Expression.Lambda(expression, parameters)
+                //let compiled = lambdaExpression.Compile();
+                //let liftedDelegate = Elem.liftDelegate compiled
 
-                
-
+                let interpreter = DynamicExpresso.Interpreter();
+                let parameters = interpreter.DetectIdentifiers(formula).UnknownIdentifiers |> Seq.map (fun param -> Parameter(param, typeof<int>)) |> Seq.toArray
+                let parseResult = interpreter.Parse(formula, parameters)
+                let liftedDelegate = Elem.liftDelegate parseResult.Invoke
                 let results = 
                     parameters|> Array.map (fun p -> processElem elemDefinitionCache (ElemCode p.Name))
 
@@ -153,9 +157,9 @@ module Domain =
 
 
     //type ComputeElem<'T> = ElemCache -> ElemCode -> ComputationCtx -> ElemValuesCache -> 'T * ElemValuesCache
+             
 
 
-    
 
 
 

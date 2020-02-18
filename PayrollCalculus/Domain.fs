@@ -1,40 +1,33 @@
 ﻿namespace PayrollCalculus
 
 open System
-open NReco.Linq
-open DynamicExpresso
-open System.Linq.Expressions
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
 
-module Effect = 
-    let sequenceList list =
-        // define the applicative functions
-        let apply (func: IEffect<'a->'b>) eff = Effect.Apply(Effect.map (fun fn -> Func<'a,'b>(fn)) func, eff)
-        let (<*>) = apply
-        //let retn = tupleReturn 
-    
-        // define a "cons" function
-        let cons head tail = head :: tail
-    
-        // right fold over the list
-        let initState = Effect.pureEffect []
-        let folder head tail = Effect.pureEffect cons <*> head <*> tail
-    
+//type StateResult<'s, 't> = 's -> Result<'t * 's, string>
+//module StateResult =
+//    let run (x: StateResult<'s, 't>) : 's -> Result<'t * 's, string> = 
+//        x 
+//    let map (f: 't->'u) (m : StateResult<'s, 't>) : StateResult<'s,'u> = 
+//        fun s -> Result.map (fun (a, s') -> (f a, s')) (run m s)
+//    let bind (f: 't-> StateResult<'s, 'u>) (m : StateResult<'s, 't>) : StateResult<'s, 'u> = 
+//        fun s -> Result.bind (fun (a, s') -> run (f a) s') (run m s)
+//    let apply (f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
+//        fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
+
+//    let retn x = fun s -> Result.Ok (x, s)
+
+
+module List =
+    let traverseResult f list =
+        let pure' = Result.Ok
+        let (<*>) fn = Result.bind (fun x-> Result.map (fun f -> f x) fn) 
+        let cons head tail = head :: tail  
+        let initState = pure' []
+        let folder head tail = pure' cons <*> (f head) <*> tail
         List.foldBack folder list initState
 
-type StateResult<'s, 't> = 's -> Result<'t * 's, string>
-module StateResult =
-    let run (x: StateResult<'s, 't>) : 's -> Result<'t * 's, string> = 
-        x 
-    let map (f: 't->'u) (m : StateResult<'s, 't>) : StateResult<'s,'u> = 
-        fun s -> Result.map (fun (a, s') -> (f a, s')) (run m s)
-    let bind (f: 't-> StateResult<'s, 'u>) (m : StateResult<'s, 't>) : StateResult<'s, 'u> = 
-        fun s -> Result.bind (fun (a, s') -> run (f a) s') (run m s)
-    let apply (f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
-        fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
-
-    let retn x = fun s -> Result.Ok (x, s)
+    let sequenceResult list = traverseResult id list
    
 
 
@@ -52,7 +45,7 @@ module Domain =
     and FormulaElemDefinition = {formula:string; deps: string list}
 
 
-    type Elem<'T> = Elem of (ComputationCtx -> IEffect<'T>)
+    type Elem<'T> = ComputationCtx -> IEffect<'T>
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -64,31 +57,13 @@ module Domain =
     and PersonId = PersonId of Guid
 
     module Elem = 
-        let liftDelegate (deleg: obj[] -> obj) = 
-            fun ([<ParamArray>] arr: Elem<obj> array) ->
-                Elem (fun ctx ->
-                        arr 
-                            |> Array.map (fun (Elem fn) -> fn ctx)
-                            |> Array.toList 
-                            |> Effect.sequenceList 
-                            //|> Effect.map (List.toArray >> (fun arr' -> deleg.DynamicInvoke arr'))
-                            |> Effect.map (List.toArray >> (fun arr' -> deleg arr'))
-                    )
-
-        let flattenEffect<'T> (x:IEffect<Elem<'T>>) = 
-            Elem (fun ctx -> Effect.bind x (fun (Elem fn) -> fn ctx))
-
-        let map (f: 'a-> 'b) ((Elem fn) : Elem<'a>) : Elem<'b> = 
-            Elem(fn >> Effect.map f)
-
-        let bind (f: 'a-> Elem<'b>) ((Elem fn) : Elem<'a>) : Elem<'b> = 
-            Elem(fun ctx -> fn ctx >>= 
-                    (fun a -> 
-                        let (Elem fn') = f a
-                        fn' ctx
-                    )
-                )
-
+        let liftFunc (func: obj[] -> obj) (arr: (ComputationCtx -> IEffect<Result<obj, string>>) []) (ctx:ComputationCtx) =
+                arr 
+                    |> Array.map (fun fn -> fn ctx)
+                    |> Array.toList 
+                    |> List.sequenceEffect
+                    |> Effect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+                    
     type ElemValuesCache = Map<ElemCode, obj>
 
 
@@ -97,9 +72,9 @@ module Domain =
             definition: DbElemDefinition
             ctx: ComputationCtx
         }
-        with interface ISideEffect<obj>
+        with interface ISideEffect<Result<obj, string>>
 
-        let load definition =  Elem(fun ctx -> Effect.Of {definition=definition; ctx=ctx})
+        let load definition ctx = Effect.Of {definition=definition; ctx=ctx}
 
     module Parser =
         type ParseFormulaSideEffect = {
@@ -115,61 +90,32 @@ module Domain =
 
     
 
-    type ParseElemDefinition  = ElemDefinitionCache -> ElemCode -> ParseElemDefinitionResult
-    and ParseElemDefinitionResult = Elem<StateResult<ElemCache, obj>>
+    type ParseElemDefinition  = ElemDefinitionCache -> ElemCode -> ComputationCtx -> IEffect<Result<obj,string>>
     and ElemDefinitionCache = Map<ElemCode, ElemDefinition>
-    and ElemCache = Map<ElemCode, Elem<obj>>
 
     let rec parseElemDefinition: ParseElemDefinition =
         fun elemDefinitionCache elemCode ->
-            let elemDefinition = elemDefinitionCache.TryFind elemCode
 
-            let parseFormulaResultToElem  (result:Parser.ParseFormulaResult) =
-                let liftedDelegate = Elem.liftDelegate result.func
-
-                let interpreter = DynamicExpresso.Interpreter();
-                let parameters = interpreter.DetectIdentifiers(formula).UnknownIdentifiers |> Seq.map (fun param -> Parameter(param, typeof<int>)) |> Seq.toArray
-                let parseResult = interpreter.Parse(formula, parameters)
-                let liftedDelegate = Elem.liftDelegate parseResult.Invoke
-                let results = 
-                    result.parameters|> Array.map (fun p -> parseElemDefinition elemDefinitionCache (ElemCode p))
-                
-                let folder =
-                    fun (current: Elem<StateResult<ElemCache, obj>>) (acc: Elem<StateResult<ElemCache, obj list>>) ->
-                        Elem.bind (StateResult.bind (fun elems -> current |> Elem.map (StateResult.map (fun elem -> elem :: elems))) current
-                
-                let results' = Array.foldBack folder results (StateResult.retn [])
-                
-                results' |> StateResult.bind 
-                    (fun paramElems -> 
-                        let resultElem = paramElems |> List.toArray |> liftedDelegate
-                        (fun s -> Result.Ok(resultElem, s.Add (elemCode,resultElem))))
-
-
-            
-            let parseFormula {formula=formula} : ParseElemDefinitionResult =
-                let parserResult = 
-                    formula 
+            let parseFormula {formula=formula} : ComputationCtx -> IEffect<Result<obj,string>> =
+                (fun ctx -> 
+                    formula
                         |> Parser.parseFormula
-                        //|> Effect.map parseFormulaResultToElem
                         |> Effect.map 
-                            (fun result ->
-                                let liftedDelegate = Elem.liftDelegate result.func
-                                let results = 
-                                    result.parameters
-                                        |> Array.map (fun p -> parseElemDefinition elemDefinitionCache (ElemCode p))
+                            (fun {func=func;parameters=parameters} ->
+                                let parsedParameters = parameters|> List.map (fun p -> parseElemDefinition elemDefinitionCache (ElemCode p)) |> List.toArray
+                                let liftedFunc = Elem.liftFunc func
+                                liftedFunc parsedParameters
                             )
-                                
+                        |> Effect.bind (fun fn -> fn ctx)
+                )
 
-                
-
-            
+            let elemDefinition = elemDefinitionCache.TryFind elemCode
             match elemDefinition with
-                | None -> (fun _-> Result.Error "could not find definition")
+                | None -> (fun _-> "could not find definition" |> Result.Error |> Effect.pure')
                 | Some elemDefinition -> 
                     match elemDefinition.Type with
                     | Db(dbElemDefinition) -> ElemValueRepo.load dbElemDefinition
-                    | Formula(formulaElemDefinition) -> processFormula formula
+                    | Formula(formulaElemDefinition) -> parseFormula formulaElemDefinition
 
             
 

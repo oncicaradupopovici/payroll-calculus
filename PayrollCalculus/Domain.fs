@@ -107,7 +107,7 @@ module Domain =
         }
         with interface ISideEffect<ParseFormulaResult>
         and ParseFormulaResult = {
-            func: Delegate
+            func: obj [] -> obj
             parameters: string list
         }
 

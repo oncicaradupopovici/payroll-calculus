@@ -2,6 +2,7 @@
 
 open System
 open NReco.Linq
+open DynamicExpresso
 open System.Linq.Expressions
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
@@ -34,12 +35,7 @@ module StateResult =
         fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
 
     let retn x = fun s -> Result.Ok (x, s)
-
-    let traverseE f list =
-        let cons head tail = head :: tail  
-        let initState = Evented.pure' []
-        let folder head tail = Evented.pure' cons <*> (f head) <*> tail
-        List.foldBack folder list initState
+   
 
 
 module Domain =
@@ -68,14 +64,15 @@ module Domain =
     and PersonId = PersonId of Guid
 
     module Elem = 
-        let liftDelegate (deleg: Delegate) = 
+        let liftDelegate (deleg: obj[] -> obj) = 
             fun ([<ParamArray>] arr: Elem<obj> array) ->
                 Elem (fun ctx ->
                         arr 
                             |> Array.map (fun (Elem fn) -> fn ctx)
                             |> Array.toList 
                             |> Effect.sequenceList 
-                            |> Effect.map (List.toArray >> (fun arr' -> deleg.DynamicInvoke arr'))
+                            //|> Effect.map (List.toArray >> (fun arr' -> deleg.DynamicInvoke arr'))
+                            |> Effect.map (List.toArray >> (fun arr' -> deleg arr'))
                     )
 
         let flattenEffect<'T> (x:IEffect<Elem<'T>>) = 
@@ -130,6 +127,10 @@ module Domain =
             let parseFormulaResultToElem  (result:Parser.ParseFormulaResult) =
                 let liftedDelegate = Elem.liftDelegate result.func
 
+                let interpreter = DynamicExpresso.Interpreter();
+                let parameters = interpreter.DetectIdentifiers(formula).UnknownIdentifiers |> Seq.map (fun param -> Parameter(param, typeof<int>)) |> Seq.toArray
+                let parseResult = interpreter.Parse(formula, parameters)
+                let liftedDelegate = Elem.liftDelegate parseResult.Invoke
                 let results = 
                     result.parameters|> Array.map (fun p -> parseElemDefinition elemDefinitionCache (ElemCode p))
                 
@@ -174,9 +175,9 @@ module Domain =
 
 
     //type ComputeElem<'T> = ElemCache -> ElemCode -> ComputationCtx -> ElemValuesCache -> 'T * ElemValuesCache
+             
 
 
-    
 
 
 

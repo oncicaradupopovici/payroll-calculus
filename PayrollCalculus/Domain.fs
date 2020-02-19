@@ -5,17 +5,17 @@ open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
 
 type StateEffect<'s, 't> = 's -> IEffect<'t * 's>
-module StateResult =
-    let run (x: StateResult<'s, 't>) : 's -> Result<'t * 's, string> = 
+module StateEffect =
+    let run (x: StateEffect<'s, 't>) : 's -> IEffect<'t * 's> = 
         x 
-    let map (f: 't->'u) (m : StateResult<'s, 't>) : StateResult<'s,'u> = 
-        fun s -> Result.map (fun (a, s') -> (f a, s')) (run m s)
-    let bind (f: 't-> StateResult<'s, 'u>) (m : StateResult<'s, 't>) : StateResult<'s, 'u> = 
-        fun s -> Result.bind (fun (a, s') -> run (f a) s') (run m s)
-    let apply (f: StateResult<'s, ('t -> 'u)>) (m: StateResult<'s, 't>) : StateResult<'s, 'u> = 
-        fun s -> Result.bind (fun (g, s') -> Result.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
+    let map (f: 't->'u) (m : StateEffect<'s, 't>) : StateEffect<'s,'u> = 
+        fun s -> Effect.map (fun (a, s') -> (f a, s')) (run m s)
+    let bind (f: 't-> StateEffect<'s, 'u>) (m : StateEffect<'s, 't>) : StateEffect<'s, 'u> = 
+        fun s -> Effect.bind (fun (a, s') -> run (f a) s') (run m s)
+    let apply (f: StateEffect<'s, ('t -> 'u)>) (m: StateEffect<'s, 't>) : StateEffect<'s, 'u> = 
+        fun s -> Effect.bind (fun (g, s') -> Effect.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
 
-    let retn x = fun s -> Result.Ok (x, s)
+    let pure' x = fun s -> Effect.pure' (x, s)
 
 
 type State<'s, 't> = 's -> 't * 's
@@ -57,7 +57,15 @@ module List =
 
     let sequenceState list = traverseState id list
    
+    let traverseStateEffect f list =
+        let pure' = StateEffect.pure'
+        let (<*>) = StateEffect.apply
+        let cons head tail = head :: tail  
+        let initState = pure' []
+        let folder head tail = pure' cons <*> (f head) <*> tail
+        List.foldBack folder list initState
 
+    let sequenceStateEffect list = traverseStateEffect id list
 
 module Domain =
 
@@ -130,6 +138,13 @@ module Domain =
                 |Ok v -> State.map Result.Ok (f v)
 
         let sequenceState result = traverseState id result
+
+        let traverseStateEffect (f: 'a-> StateEffect<'s, 'b>) (result:Result<'a,'e>) : StateEffect<'s, Result<'b, 'e>> = 
+            match result with
+                |Error err -> StateEffect.map Result.Error (StateEffect.pure' err)
+                |Ok v -> StateEffect.map Result.Ok (f v)
+
+        let sequenceStateEffect result = traverseStateEffect id result
 
 
     module ElemValueRepo = 
@@ -211,49 +226,87 @@ module Domain =
                 |> Effect.map (Result.sequenceElem >> Elem.flattenResult)
 
 
-    type ComputeElem3  = ElemDefinitionCache -> ElemCache -> ElemCode -> IEffect<Elem<obj>*ElemCache>
+    type ComputeElem3  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
     let rec computeElem3: ComputeElem3 =
         fun elemDefinitionCache elemCode -> 
 
-            let computeFormula {formula=formula} : ElemCache -> IEffect<Elem<obj>*ElemCache> =
+            let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
                 fun elemCache -> 
                     formula
                         |> Parser.parseFormula
                         |> Effect.bind
                             (fun {func=func;parameters=parameters} ->
-                                let state = 
+                                let stateEffect = 
                                     parameters
-                                        |> List.traverseEffect (ElemCode >> computeElem3 elemDefinitionCache elemCache)
-                                        |> State.map (List.sequenceEffect >> Effect.map (List.toArray >> Elem.liftFunc func))
-                                let (eff, elemCache') = State.run state elemCache
-                                eff |> Effect.map (fun x-> (x, elemCache'))
-                                    //|> Effect.map (List.sequenceState >> State.map (List.toArray >> Elem.liftFunc func))
+                                        |> List.traverseStateEffect (ElemCode >> computeElem3 elemDefinitionCache)
+                                        |> StateEffect.map (List.toArray >> Elem.liftFunc func)
+
+                                StateEffect.run stateEffect elemCache
                             )
 
                 
             let matchElemDefinition elemDefinition = 
                 match elemDefinition.Type with
-                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> State.pure'|> Effect.pure'
+                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> StateEffect.pure'
                 | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
 
 
             elemCode
                 |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
-                |> Result.traverseEffect matchElemDefinition
-                |> Effect.map (Result.sequenceState >> State.map Result.sequenceElem >> State.map Elem.flattenResult)
-                |> Effect.map (State.bind (fun elem cache -> (elem, cache.Add(elemCode, elem))))
+                |> Result.traverseStateEffect matchElemDefinition
+                |> StateEffect.map (Result.sequenceElem >> Elem.flattenResult)
+                |> StateEffect.bind (fun elem cache -> Effect.pure' (elem, cache.Add(elemCode, elem)))
 
 
-   
-            
 
+
+    type ComputeElem4  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
+    let rec computeElem4: ComputeElem4 =
+       fun elemDefinitionCache elemCode elemCache -> 
+           let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
+               fun elemCache -> 
+                   formula
+                       |> Parser.parseFormula
+                       |> Effect.bind
+                           (fun {func=func;parameters=parameters} ->
+                               let stateEffect = 
+                                   parameters
+                                       |> List.traverseStateEffect (ElemCode >> computeElem4 elemDefinitionCache)
+                                       |> StateEffect.map (List.toArray >> Elem.liftFunc func)
+
+                               StateEffect.run stateEffect elemCache
+                           )
+
+               
+           let matchElemDefinition elemDefinition = 
+               match elemDefinition.Type with
+               | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> StateEffect.pure'
+               | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
+
+
+           let compute() = 
+               elemCode
+               |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
+               |> Result.traverseStateEffect matchElemDefinition
+               |> StateEffect.map (Result.sequenceElem >> Elem.flattenResult)
+               |> StateEffect.bind (fun elem cache -> Effect.pure' (elem, cache.Add(elemCode, elem)))
+
+
+           match (elemCache.TryFind elemCode) with
+               | Some elem -> Effect.pure' (elem, elemCache)
+               | None -> StateEffect.run (compute()) elemCache
+
+    
+    
+    
+    
     let loadElemDefinitions() = Effect.pure' Map.empty<ElemCode, ElemDefinition>
 
     let h elemCode1 elemCode2 ctx = 
         effect{
             let! elemDefinitionCache = loadElemDefinitions()
-            let! (elem1,cache) = computeElem3 elemDefinitionCache elemCode1 Map.empty<ElemCode, Elem<obj>>
-            let! (elem2,cache) = computeElem3 elemDefinitionCache elemCode2 cache
+            let! (elem1,cache) = computeElem4 elemDefinitionCache elemCode1 Map.empty<ElemCode, Elem<obj>>
+            let! (elem2,cache) = computeElem4 elemDefinitionCache elemCode2 cache
             let! value = elem2 ctx
             return value
         }

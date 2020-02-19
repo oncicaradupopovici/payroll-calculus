@@ -28,6 +28,7 @@ module List =
         List.foldBack folder list initState
 
     let sequenceResult list = traverseResult id list
+    
 
 
    
@@ -87,6 +88,15 @@ module Domain =
                 |Error err -> map Result.Error (pure' err)
                 |Ok v -> map Result.Ok (f v)
 
+        let sequenceElem result = traverseElem id result
+
+        let traverseEffect (f: 'a-> IEffect<'c>) (result:Result<'a,'b>) : IEffect<Result<'c, 'b>> = 
+            match result with
+                |Error err -> Effect.map Result.Error (Effect.pure' err)
+                |Ok v -> Effect.map Result.Ok (f v)
+
+        let sequenceEffect result = traverseEffect id result
+
 
     module ElemValueRepo = 
         type LoadSideEffect = {
@@ -138,6 +148,46 @@ module Domain =
                     | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
                 )
             |> Elem.flattenResult
+
+
+    type ComputeElem2  = ElemDefinitionCache -> ElemCode -> IEffect<Elem<obj>>
+    let rec computeElem2: ComputeElem2 =
+        fun elemDefinitionCache elemCode ->
+
+            let computeFormula {formula=formula} : IEffect<Elem<obj>> =
+                formula
+                    |> Parser.parseFormula
+                    |> Effect.bind 
+                        (fun {func=func;parameters=parameters} ->
+                            parameters
+                                |> List.traverseEffect (ElemCode >> computeElem2 elemDefinitionCache)
+                                |> Effect.map (List.toArray >> Elem.liftFunc func)
+                    )
+
+                
+            let matchElemDefinition elemDefinition = 
+                match elemDefinition.Type with
+                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> Effect.pure'
+                | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
+
+
+            elemCode 
+                |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
+                |> Result.traverseEffect matchElemDefinition
+                |> Effect.map (Result.sequenceElem >> Elem.flattenResult)
+
+   
+            
+
+    let loadElemDefinitions() = Effect.pure' Map.empty<ElemCode, ElemDefinition>
+
+    let h elemCode ctx = 
+        effect{
+            let! elemDefinitionCache = loadElemDefinitions()
+            let! elem = computeElem2 elemDefinitionCache elemCode
+            let! value = elem ctx
+            return value
+        }
                 
                
              

@@ -28,6 +28,8 @@ module List =
         List.foldBack folder list initState
 
     let sequenceResult list = traverseResult id list
+
+
    
 
 
@@ -44,8 +46,16 @@ module Domain =
     and DbElemDefinition = {table:string; column:string}
     and FormulaElemDefinition = {formula:string; deps: string list}
 
+    type ElemDefinitionCache = Map<ElemCode, ElemDefinition>
+    module ElemDefinitionCache =
+        let findElemDefinition (elemDefinitionCache:ElemDefinitionCache) elemCode = 
+            match (elemDefinitionCache.TryFind elemCode) with
+                | None -> "could not find definition" |> Result.Error
+                | Some elemDefinition -> Result.Ok elemDefinition
 
-    type Elem<'T> = ComputationCtx -> IEffect<'T>
+
+
+    type Elem<'T> = ComputationCtx -> IEffect<Result<'T,string>>
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -57,14 +67,25 @@ module Domain =
     and PersonId = PersonId of Guid
 
     module Elem = 
-        let liftFunc (func: obj[] -> obj) (arr: (ComputationCtx -> IEffect<Result<obj, string>>) []) (ctx:ComputationCtx) =
+        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) (ctx:ComputationCtx) =
                 arr 
                     |> Array.map (fun fn -> fn ctx)
                     |> Array.toList 
                     |> List.sequenceEffect
                     |> Effect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+
+        let flattenResult (elem:Elem<Result<'a,string>>) :Elem<'a> = elem >> Effect.map (Result.bind id)
                     
     type ElemValuesCache = Map<ElemCode, obj>
+
+    module Result = 
+        let traverseElem (f: 'a-> Elem<'c>) (result:Result<'a,'b>) : Elem<Result<'c, 'b>> = 
+            let pure' x = fun ctx -> Effect.pure' x
+            let map f elem = elem >> Effect.map f
+
+            match result with
+                |Error err -> map Result.Error (pure' err)
+                |Ok v -> map Result.Ok (f v)
 
 
     module ElemValueRepo = 
@@ -88,39 +109,37 @@ module Domain =
 
         let parseFormula formula = Effect.Of {formula=formula}
 
+
     
 
-    type ParseElemDefinition  = ElemDefinitionCache -> ElemCode -> ComputationCtx -> IEffect<Result<obj,string>>
-    and ElemDefinitionCache = Map<ElemCode, ElemDefinition>
-
-    let rec parseElemDefinition: ParseElemDefinition =
+    type ComputeElem  = ElemDefinitionCache -> ElemCode -> Elem<obj>
+    let rec computeElem: ComputeElem =
         fun elemDefinitionCache elemCode ->
 
-            let parseFormula {formula=formula} : ComputationCtx -> IEffect<Result<obj,string>> =
+            let computeFormula {formula=formula} : Elem<obj> =
                 (fun ctx -> 
                     formula
                         |> Parser.parseFormula
                         |> Effect.map 
                             (fun {func=func;parameters=parameters} ->
-                                let parsedParameters = parameters|> List.map (fun p -> parseElemDefinition elemDefinitionCache (ElemCode p)) |> List.toArray
+                                let parsedParameters = parameters|> List.map (fun p -> computeElem elemDefinitionCache (ElemCode p)) |> List.toArray
                                 let liftedFunc = Elem.liftFunc func
                                 liftedFunc parsedParameters
                             )
                         |> Effect.bind (fun fn -> fn ctx)
                 )
 
-            let elemDefinition = elemDefinitionCache.TryFind elemCode
-            match elemDefinition with
-                | None -> (fun _-> "could not find definition" |> Result.Error |> Effect.pure')
-                | Some elemDefinition -> 
+            elemCode 
+            |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
+            |> Result.traverseElem
+                (fun elemDefinition ->
                     match elemDefinition.Type with
                     | Db(dbElemDefinition) -> ElemValueRepo.load dbElemDefinition
-                    | Formula(formulaElemDefinition) -> parseFormula formulaElemDefinition
-
-            
-
-
-    //type ComputeElem<'T> = ElemCache -> ElemCode -> ComputationCtx -> ElemValuesCache -> 'T * ElemValuesCache
+                    | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
+                )
+            |> Elem.flattenResult
+                
+               
              
 
 

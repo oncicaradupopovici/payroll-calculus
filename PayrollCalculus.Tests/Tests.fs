@@ -76,11 +76,11 @@ let ``It shoud evaluate data access element`` () =
     let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let res = match result with
-                    | Error e -> e :> obj
-                    | Ok x -> x
-
-    res |> should equal (1 :> obj)
+    //let res = match result with
+    //                | Error e -> e :> obj
+    //                | Ok x -> x
+    let expected:Result<obj,string> = Ok (1:>obj)
+    result |> should equal expected
 
 
 

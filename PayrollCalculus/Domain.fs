@@ -232,7 +232,48 @@ module Domain =
                | Some elem -> Effect.pure' (elem, elemCache)
                | None -> StateEffect.run (compute()) elemCache
 
-    
+                        
+    type ComputeElem5  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
+    let rec computeElem5: ComputeElem4 =
+       fun elemDefinitionCache elemCode -> 
+           let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
+                stateEffect {
+                    let! {func=func;parameters=parameters} = formula |> Parser.parseFormula |> StateEffect.lift
+                    let! paramElems =  parameters |> List.traverseStateEffect (ElemCode >> computeElem5 elemDefinitionCache)
+                    
+                    return paramElems |> List.toArray |> Elem.liftFunc func
+                }
+               
+           let matchElemDefinition elemDefinition = 
+               match elemDefinition.Type with
+               | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> StateEffect.pure'
+               | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
+
+
+           let compute() = 
+                stateEffect {
+                    let! elemResult = 
+                        elemCode 
+                        |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
+                        |> Result.traverseStateEffect matchElemDefinition
+
+                    return elemResult |> Result.sequenceElem |> Elem.flattenResult
+                }
+
+
+           stateEffect {
+                let! elemCache = StateEffect.get ()
+
+                return! 
+                    match (elemCache.TryFind elemCode) with
+                    | Some elem -> StateEffect.pure' elem
+                    | None -> 
+                        stateEffect { 
+                            let! elem = compute ()
+                            do! StateEffect.put (elemCache.Add (elemCode, elem))
+                            return elem
+                        }
+           }
     
     
   

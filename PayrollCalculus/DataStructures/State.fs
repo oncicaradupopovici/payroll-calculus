@@ -11,7 +11,7 @@ module State =
     let apply (f: State<'s, ('t -> 'u)>) (m: State<'s, 't>) : State<'s, 'u> = 
         fun s -> let (f, s') = run f s in let (a, s'') = run m s' in (f a, s'')
 
-    let get : State<'s, 's> = 
+    let get () : State<'s, 's> = 
         fun s -> (s, s)   
     let put (x: 's) : State<'s, unit> = 
         fun _ -> ((), x)

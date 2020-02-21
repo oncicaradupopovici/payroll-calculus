@@ -16,6 +16,13 @@ module StateEffect =
 
     let pure' x = fun s -> Effect.pure' (x, s)
 
+    let get () : StateEffect<'s, 's> = 
+        fun s -> Effect.pure' (s, s)
+    let put (x: 's) : StateEffect<'s, unit> = 
+        fun _ -> Effect.pure' ((), x)
+
+    let flatten x = bind id x
+
     let lift (eff : IEffect<'t>) : StateEffect<'s, 't> =
         fun s -> eff |> Effect.map (fun a -> (a, s))
 

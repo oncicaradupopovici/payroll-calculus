@@ -3,38 +3,7 @@
 open System
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
-
-type StateEffect<'s, 't> = 's -> IEffect<'t * 's>
-module StateEffect =
-    let run (x: StateEffect<'s, 't>) : 's -> IEffect<'t * 's> = 
-        x 
-    let map (f: 't->'u) (m : StateEffect<'s, 't>) : StateEffect<'s,'u> = 
-        fun s -> Effect.map (fun (a, s') -> (f a, s')) (run m s)
-    let bind (f: 't-> StateEffect<'s, 'u>) (m : StateEffect<'s, 't>) : StateEffect<'s, 'u> = 
-        fun s -> Effect.bind (fun (a, s') -> run (f a) s') (run m s)
-    let apply (f: StateEffect<'s, ('t -> 'u)>) (m: StateEffect<'s, 't>) : StateEffect<'s, 'u> = 
-        fun s -> Effect.bind (fun (g, s') -> Effect.map (fun (a: 't, s'': 's) -> ((g a), s'')) (run m s')) (f s)
-
-    let pure' x = fun s -> Effect.pure' (x, s)
-
-
-type State<'s, 't> = 's -> 't * 's
-module State =
-    let run (x: State<'s, 't>) : 's -> 't * 's = 
-        x 
-    let map (f: 't->'u) (m : State<'s, 't>) : State<'s,'u> = 
-        fun s -> let (a, s') = run m s in (f a, s')
-    let bind (f: 't-> State<'s, 'u>) (m : State<'s, 't>) : State<'s, 'u> = 
-        fun s -> let (a, s') = run m s in run (f a) s'
-    let apply (f: State<'s, ('t -> 'u)>) (m: State<'s, 't>) : State<'s, 'u> = 
-        fun s -> let (f, s') = run f s in let (a, s'') = run m s' in (f a, s'')
-
-    let get : State<'s, 's> = 
-        fun s -> (s, s)   
-    let put (x: 's) : State<'s, unit> = 
-        fun _ -> ((), x)
-
-    let pure' x = fun s -> (x, s)
+open DataStructures
 
 module List =
     let traverseResult f list =
@@ -47,25 +16,6 @@ module List =
 
     let sequenceResult list = traverseResult id list
 
-    let traverseState f list =
-        let pure' = State.pure'
-        let (<*>) = State.apply
-        let cons head tail = head :: tail  
-        let initState = pure' []
-        let folder head tail = pure' cons <*> (f head) <*> tail
-        List.foldBack folder list initState
-
-    let sequenceState list = traverseState id list
-   
-    let traverseStateEffect f list =
-        let pure' = StateEffect.pure'
-        let (<*>) = StateEffect.apply
-        let cons head tail = head :: tail  
-        let initState = pure' []
-        let folder head tail = pure' cons <*> (f head) <*> tail
-        List.foldBack folder list initState
-
-    let sequenceStateEffect list = traverseStateEffect id list
 
 module Domain =
 
@@ -131,20 +81,6 @@ module Domain =
                 |Ok v -> Effect.map Result.Ok (f v)
 
         let sequenceEffect result = traverseEffect id result
-
-        let traverseState (f: 'a-> State<'s, 'b>) (result:Result<'a,'e>) : State<'s, Result<'b, 'e>> = 
-            match result with
-                |Error err -> State.map Result.Error (State.pure' err)
-                |Ok v -> State.map Result.Ok (f v)
-
-        let sequenceState result = traverseState id result
-
-        let traverseStateEffect (f: 'a-> StateEffect<'s, 'b>) (result:Result<'a,'e>) : StateEffect<'s, Result<'b, 'e>> = 
-            match result with
-                |Error err -> StateEffect.map Result.Error (StateEffect.pure' err)
-                |Ok v -> StateEffect.map Result.Ok (f v)
-
-        let sequenceStateEffect result = traverseStateEffect id result
 
 
     module ElemValueRepo = 
@@ -299,7 +235,7 @@ module Domain =
     
     
     
-    
+  
     let loadElemDefinitions() = Effect.pure' Map.empty<ElemCode, ElemDefinition>
 
     let h elemCode1 elemCode2 ctx = 
@@ -310,12 +246,50 @@ module Domain =
             let! value = elem2 ctx
             return value
         }
+
+    let h1 elemCode1 elemCode2 ctx = 
+      effect{
+            let! elemDefinitionCache = loadElemDefinitions()
+
+            let parser = stateEffect {
+                let! elem1 = computeElem4 elemDefinitionCache elemCode1
+                let! elem2 = computeElem4 elemDefinitionCache elemCode2 
+
+                return elem2
+            }
+
+            let! (elem2, _) = StateEffect.run parser Map.empty
+
+            let! value = elem2 ctx
+            return value
+        }
                 
                
-             
+    let h2 elemCode1 elemCode2 ctx = 
+       stateEffect {
+            let! elemDefinitionCache = StateEffect.lift (loadElemDefinitions())
+
+           
+            let! elem1 = computeElem4 elemDefinitionCache elemCode1
+            let! elem2 = computeElem4 elemDefinitionCache elemCode2 
 
 
+            let value = elem2 ctx
+            return value
+        }
 
+    let h3 elemCodes ctxs = 
+        effect{
+            let! elemDefinitionCache = loadElemDefinitions()
+
+            let parser = elemCodes |> List.traverseStateEffect (computeElem4 elemDefinitionCache)
+            let! (elems, _) = StateEffect.run parser Map.empty
+
+            let! values = ctxs |> List.traverseEffect (fun ctx -> elems |> List.traverseEffect (fun elem -> elem ctx))
+
+           return values
+        }
+                
 
 
 

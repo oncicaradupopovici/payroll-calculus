@@ -5,6 +5,11 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="DataStructures\Reader.fs" />
+    <Compile Include="DataStructures\ReaderEffect.fs" />
+
+    <Compile Include="DataStructures\State.fs" />
+    <Compile Include="DataStructures\StateEffect.fs" />
     <Compile Include="Domain.fs" />
     <Compile Include="DataAccess.fs" />
     <Compile Include="Parser.fs" />

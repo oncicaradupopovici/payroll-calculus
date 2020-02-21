@@ -6,44 +6,29 @@ open PayrollCalculus.Domain
 open PayrollCalculus
 open FsUnit.Xunit
 open NBB.Core.Effects.FSharp
+open DataStructures
 
 module Handlers =
     open Domain.ElemValueRepo
     open Domain.Parser
     open NBB.Core.Effects
     open System.Threading
-    open System.Threading.Tasks
-    open Parser
-    open Microsoft.Extensions.DependencyInjection;
 
     type DbResult = Result<obj, string>
 
-    type DbSideEffectHandler(dbHandler: LoadSideEffect -> DbResult) =
-        interface ISideEffectHandler<LoadSideEffect, DbResult> with
-            member this.Handle(sideEffect, _) =
-                Task.FromResult (Result.Ok (1 :> obj))
-        member this.Handle(sideEffect : ISideEffect<DbResult>, _) : DbResult =
-            let sideEffect =  sideEffect :?> LoadSideEffect
-            dbHandler sideEffect
+    type GenericSideEffectHandler(dbHandler : LoadSideEffect -> DbResult, formulaHandler: ParseFormulaSideEffect -> ParseFormulaResult) =
+        interface ISideEffectHandler 
+        member _.Handle(sideEffect: obj, _ : CancellationToken) =
+           match (sideEffect) with
+                | :? LoadSideEffect as lse -> dbHandler(lse) :> obj
+                | :? ParseFormulaSideEffect as pfe -> formulaHandler (pfe) :> obj
+                | _ -> null
 
-    type FormulaSideEffectHandler(formulaHandler : ParseFormulaSideEffect -> ParseFormulaResult) =   
-        interface ISideEffectHandler<ParseFormulaSideEffect, ParseFormulaResult> with
-            member this.Handle(sideEffect, _) =
-                Task.FromResult {func= (fun _ -> (1:>obj)); parameters= ["a"; "b"]}
-        member this.Handle(sideEffect: ISideEffect<ParseFormulaResult>, _ : CancellationToken) =
-            let sideEffect =  sideEffect :?> ParseFormulaSideEffect
-            formulaHandler sideEffect
-    
-    let getIoCFactory(dbHandler, formulaHandler) =
-        let formulaHandler' = Func<IServiceProvider, ISideEffectHandler<ParseFormulaSideEffect, ParseFormulaResult>>(fun _ -> (new FormulaSideEffectHandler(formulaHandler) :> ISideEffectHandler<ParseFormulaSideEffect, ParseFormulaResult>))
-        let dbHandler' = Func<IServiceProvider, ISideEffectHandler<LoadSideEffect, DbResult>>(fun _ -> (new DbSideEffectHandler(dbHandler) :> ISideEffectHandler<LoadSideEffect, DbResult>))
-
-        let services = new ServiceCollection()
-        services.AddScoped<ISideEffectHandler<LoadSideEffect, DbResult>>(dbHandler') |> ignore
-        services.AddScoped<ISideEffectHandler<ParseFormulaSideEffect, ParseFormulaResult>>(formulaHandler') |> ignore
-        //use container = services.BuildServiceProvider()
-        let container = services.BuildServiceProvider()
-        new SideEffectHandlerFactory(container)
+    let getHandlerFactory (dbHandler, formulaHandler)  =
+        { new ISideEffectHandlerFactory with
+            member this.GetSideEffectHandlerFor<'TOutput> (_: ISideEffect<'TOutput>) = 
+               SideEffectHandlerWrapper(new GenericSideEffectHandler(dbHandler, formulaHandler)) :> ISideEffectHandler<ISideEffect<'TOutput>, 'TOutput>
+        }
 
 
 [<Fact>]
@@ -60,7 +45,7 @@ let ``It shoud evaluate data access element`` () =
 
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
 
-    let factory = Handlers.getIoCFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {func= (fun _ -> (1:>obj)); parameters= []}))
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {func= (fun _ -> (1:>obj)); parameters= []}))
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
@@ -76,9 +61,6 @@ let ``It shoud evaluate data access element`` () =
     let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    //let res = match result with
-    //                | Error e -> e :> obj
-    //                | Ok x -> x
     let expected:Result<obj,string> = Ok (1:>obj)
     result |> should equal expected
 
@@ -98,7 +80,7 @@ let ``It shoud evaluate formula without params`` () =
 
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
 
-    let factory = Handlers.getIoCFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {func= (fun _ -> (3 :> obj)); parameters= []}))
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {func= (fun _ -> (3 :> obj)); parameters= []}))
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
@@ -114,11 +96,8 @@ let ``It shoud evaluate formula without params`` () =
     let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let res = match result with
-                    | Error e -> e :> obj
-                    | Ok x -> x
-
-    res |> should equal (3 :> obj)
+    let expected:Result<obj,string> = Ok (3:>obj)
+    result |> should equal expected
 
 
 [<Fact>]
@@ -145,13 +124,20 @@ let ``It shoud evaluate formula with params`` () =
         | "1 + code2" -> {func= (fun ([|code2|]) -> box(1 + (unbox<int> code2))); parameters=["code2"] }
         | _ -> {func= (fun _ -> (1:>obj)); parameters= []}
 
-    let factory = Handlers.getIoCFactory((fun _ -> Result.Ok (1:> obj)) , formulaHandler)
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , formulaHandler)
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
-          let! (elem1, cache) = computeElem4 elemDefinitionCache code1 Map.empty
-          let! (elem2, cache') = computeElem4 elemDefinitionCache code2 cache
+
+          let parser = stateEffect {
+            let! elem1 = computeElem4 elemDefinitionCache code1 
+            let! elem2 = computeElem4 elemDefinitionCache code2
+
+            return (elem1, elem2)
+          }
+
+          let! ((elem1, elem2), _) = parser Map.empty
           let! value1 = elem1 ctx
           let! value2 = elem2 ctx
 
@@ -160,16 +146,11 @@ let ``It shoud evaluate formula with params`` () =
 
     // Act
 
-    let (result1, result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
+    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let res1 = match result1 with
-                    | Error e -> e :> obj
-                    | Ok x -> x
+    let expected1:Result<obj, string> = Ok (4:>obj)
+    result1 |> should equal expected1
 
-    let res2 = match result2 with
-                    | Error e -> e :> obj
-                    | Ok x -> x
-
-    res1 |> should equal (4 :> obj)
-    res2 |> should equal (1 :> obj)
+    let expected2:Result<obj, string> = Ok (1:>obj)
+    result2 |> should equal expected2

@@ -50,8 +50,7 @@ let ``It shoud evaluate data access element`` () =
 
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
-          let! (elem1, _) = computeElem4 elemDefinitionCache code1 Map.empty
-          let! value = elem1 ctx
+          let! value = evaluateElem elemDefinitionCache code1 ctx
 
           return value
       }
@@ -85,8 +84,7 @@ let ``It shoud evaluate formula without params`` () =
 
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
-          let! (elem1, _) = computeElem4 elemDefinitionCache code1 Map.empty
-          let! value = elem1 ctx
+          let! value = evaluateElem elemDefinitionCache code1 ctx
 
           return value
     }
@@ -130,16 +128,7 @@ let ``It shoud evaluate formula with params`` () =
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
 
-          let parser = stateEffect {
-            let! elem1 = computeElem4 elemDefinitionCache code1 
-            let! elem2 = computeElem4 elemDefinitionCache code2
-
-            return (elem1, elem2)
-          }
-
-          let! ((elem1, elem2), _) = parser Map.empty
-          let! value1 = elem1 ctx
-          let! value2 = elem2 ctx
+          let! value1::value2::_ = evaluateElems elemDefinitionCache [code1; code2] ctx
 
           return (value1, value2)
       }

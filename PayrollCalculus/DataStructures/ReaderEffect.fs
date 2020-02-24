@@ -36,3 +36,17 @@ module ReaderEffects =
     let (<!>) = ReaderEffect.map
     let (<*>) = ReaderEffect.apply
     let (>>=) eff func = ReaderEffect.bind func eff
+
+
+namespace DataStructures.ReaderEff
+    open DataStructures
+    module List =
+        let traverseReaderEffect f list =
+            let pure' = ReaderEffect.pure'
+            let (<*>) = ReaderEffect.apply
+            let cons head tail = head :: tail  
+            let initState = pure' []
+            let folder head tail = pure' cons <*> (f head) <*> tail
+            List.foldBack folder list initState
+
+        let sequenceReaderEffect list = traverseReaderEffect id list

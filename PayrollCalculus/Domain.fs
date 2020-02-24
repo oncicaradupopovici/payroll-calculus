@@ -275,7 +275,28 @@ module Domain =
                         }
            }
     
-    
+
+    let evaluateElem elemDefinitionCache elemCode ctx =
+        effect {
+            let! (elem, _) = StateEffect.run (computeElem5 elemDefinitionCache elemCode) Map.empty
+            return! Reader.run elem ctx
+        }
+        
+    let evaluateElems elemDefinitionCache elemCodes ctx =
+        effect {
+            let statefulElems = elemCodes |> List.traverseStateEffect (computeElem5 elemDefinitionCache)
+            let! (elems, _) = StateEffect.run statefulElems Map.empty
+            //let! results =  elems |> List.traverseEffect (fun elem -> Reader.run elem ctx)
+            let! results = ReaderEffect.run (elems |> ReaderEff.List.sequenceReaderEffect) ctx
+            return results
+        }
+
+    let evaluateElemsMultipleContexts elemDefinitionCache elemCodes ctxs =
+        effect {
+            let x = evaluateElems elemDefinitionCache elemCodes 
+            let! results = ctxs |> List.traverseEffect (fun ctx -> ReaderEffect.run x ctx)
+            return results
+        }
   
     let loadElemDefinitions() = Effect.pure' Map.empty<ElemCode, ElemDefinition>
 

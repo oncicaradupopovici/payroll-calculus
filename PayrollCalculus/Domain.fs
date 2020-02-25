@@ -22,6 +22,7 @@ module Domain =
     type ElemDefinition = {
         Code: ElemCode
         Type: ElemType
+        DataType: Type
     }
     and ElemCode = ElemCode of string
     and ElemType = 
@@ -94,7 +95,9 @@ module Domain =
 
     module Parser =
         type ParseFormulaSideEffect = {
-            formula:string
+            formula:string;
+            definitions: ElemDefinitionCache;
+
         }
         with interface ISideEffect<ParseFormulaResult>
         and ParseFormulaResult = {
@@ -102,7 +105,7 @@ module Domain =
             parameters: string list
         }
 
-        let parseFormula formula = Effect.Of {formula=formula}
+        let parseFormula definitions formula = Effect.Of {formula=formula; definitions=definitions}
 
 
     
@@ -114,7 +117,7 @@ module Domain =
             let computeFormula {formula=formula} : Elem<obj> =
                 (fun ctx -> 
                     formula
-                        |> Parser.parseFormula
+                        |> Parser.parseFormula elemDefinitionCache
                         |> Effect.map 
                             (fun {func=func;parameters=parameters} ->
                                 let parsedParameters = parameters|> List.map (fun p -> computeElem elemDefinitionCache (ElemCode p)) |> List.toArray
@@ -141,7 +144,7 @@ module Domain =
 
             let computeFormula {formula=formula} : IEffect<Elem<obj>> =
                 formula
-                    |> Parser.parseFormula
+                    |> Parser.parseFormula elemDefinitionCache
                     |> Effect.bind 
                         (fun {func=func;parameters=parameters} ->
                             parameters
@@ -169,7 +172,7 @@ module Domain =
             let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
                 fun elemCache -> 
                     formula
-                        |> Parser.parseFormula
+                        |> Parser.parseFormula elemDefinitionCache
                         |> Effect.bind
                             (fun {func=func;parameters=parameters} ->
                                 let stateEffect = 
@@ -202,7 +205,7 @@ module Domain =
            let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
                fun elemCache -> 
                    formula
-                       |> Parser.parseFormula
+                       |> Parser.parseFormula elemDefinitionCache
                        |> Effect.bind
                            (fun {func=func;parameters=parameters} ->
                                let stateEffect = 
@@ -238,7 +241,7 @@ module Domain =
        fun elemDefinitionCache elemCode -> 
            let computeFormula {formula=formula} :StateEffect<ElemCache, Elem<obj>> =
                 stateEffect {
-                    let! {func=func;parameters=parameters} = formula |> Parser.parseFormula |> StateEffect.lift
+                    let! {func=func;parameters=parameters} = formula |> Parser.parseFormula elemDefinitionCache |> StateEffect.lift
                     let! paramElems =  parameters |> List.traverseStateEffect (ElemCode >> computeElem5 elemDefinitionCache)
                     
                     return paramElems |> List.toArray |> Elem.liftFunc func

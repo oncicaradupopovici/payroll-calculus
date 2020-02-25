@@ -39,7 +39,7 @@ let ``It shoud evaluate data access element`` () =
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Db {table="aa"; column ="bb"} })
+                   .Add(code1, {Code = code1; Type = Db {table="aa"; column ="bb"}; DataType= typeof<int> })
 
         Effect.pure' elemDefinitionCache
 
@@ -73,7 +73,7 @@ let ``It shoud evaluate formula without params`` () =
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Formula {formula="1 + 2"; deps =[]} })
+                   .Add(code1, {Code = code1; Type = Formula {formula="1 + 2"; deps =[]}; DataType= typeof<int> })
 
         Effect.pure' elemDefinitionCache
 
@@ -108,9 +108,9 @@ let ``It shoud evaluate formula with params`` () =
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Formula {formula="1 + code2 + code3"; deps =[]} })
-                   .Add(code2, {Code = code2; Type = Db {table="aa"; column ="bb"} })
-                   .Add(code3, {Code = code3; Type = Formula {formula="1 + code2"; deps =[]} })           
+                   .Add(code1, {Code = code1; Type = Formula {formula="1m + code2 + code3"; deps =[]} ;DataType= typeof<decimal> })
+                   .Add(code2, {Code = code2; Type = Db {table="aa"; column ="bb"}; DataType= typeof<decimal>})
+                   .Add(code3, {Code = code3; Type = Formula {formula="1m + code2"; deps =[]; }; DataType= typeof<decimal> })           
 
         Effect.pure' elemDefinitionCache
 
@@ -118,11 +118,11 @@ let ``It shoud evaluate formula with params`` () =
 
     let formulaHandler ({formula=formula} : Parser.ParseFormulaSideEffect) : Parser.ParseFormulaResult =
         match formula with
-        | "1 + code2 + code3" -> {func= (fun ([|code2; code3|]) -> box(1 + (unbox<int> code2) +  (unbox<int> code3))); parameters=["code2"; "code3"] }
-        | "1 + code2" -> {func= (fun ([|code2|]) -> box(1 + (unbox<int> code2))); parameters=["code2"] }
+        | "1m + code2 + code3" -> {func= (fun ([|code2; code3|]) -> box(1m + (unbox<decimal> code2) +  (unbox<decimal> code3))); parameters=["code2"; "code3"] }
+        | "1m + code2" -> {func= (fun ([|code2|]) -> box(1m + (unbox<decimal> code2))); parameters=["code2"] }
         | _ -> {func= (fun _ -> (1:>obj)); parameters= []}
 
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , formulaHandler)
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
@@ -138,8 +138,34 @@ let ``It shoud evaluate formula with params`` () =
     let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let expected1:Result<obj, string> = Ok (4:>obj)
+    let expected1:Result<obj, string> = Ok (10m:>obj)
     result1 |> should equal expected1
 
-    let expected2:Result<obj, string> = Ok (1:>obj)
+    let expected2:Result<obj, string> = Ok (4m:>obj)
+    result2 |> should equal expected2
+
+[<Fact>]
+let ``It shoud evaluate formula with params (integration)`` () =
+    
+    // Arrange
+    let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
+
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1000m:> obj)), PayrollCalculus.Application.FormulaParser.handle)
+    let interpreter = NBB.Core.Effects.Interpreter(factory)
+
+    let eff = effect {
+          let! elemDefinitionCache = PayrollCalculus.Data.DataAccess.loadElemDefinitions ()
+          let! value1::value2::_ = evaluateElems elemDefinitionCache [ElemCode "SalariuNet"; ElemCode "Impozit"] ctx
+
+          return (value1, value2)
+      }
+
+    // Act
+    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
+
+    // Assert
+    let expected1:Result<obj, string> = Ok (900m:>obj)
+    result1 |> should equal expected1
+
+    let expected2:Result<obj, string> = Ok (100m:>obj)
     result2 |> should equal expected2

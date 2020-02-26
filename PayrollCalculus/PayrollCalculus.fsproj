@@ -5,6 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    
+    <Compile Include="Infra.fs" />
     <Compile Include="DataStructures\Reader.fs" />
     <Compile Include="DataStructures\ReaderEffect.fs" />
 
@@ -13,6 +15,8 @@
     <Compile Include="Domain.fs" />
     <Compile Include="DataAccess.fs" />
     <Compile Include="Parser.fs" />
+    <Compile Include="SideEffectHandlers\DataAccess.fs" />
+    <Compile Include="SideEffectHandlers\FormulaParser.fs" />
   </ItemGroup>
 
   <ItemGroup>

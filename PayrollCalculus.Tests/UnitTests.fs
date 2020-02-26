@@ -1,4 +1,4 @@
-module Tests
+module UnitTests
 
 open System
 open Xunit
@@ -105,6 +105,7 @@ let ``It shoud evaluate formula with params`` () =
     let code1 = ElemCode "code1"
     let code2 = ElemCode "code2"
     let code3 = ElemCode "code3"
+
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
@@ -118,19 +119,32 @@ let ``It shoud evaluate formula with params`` () =
 
     let formulaHandler ({formula=formula} : Parser.ParseFormulaSideEffect) : Parser.ParseFormulaResult =
         match formula with
-        | "1m + code2 + code3" -> {func= (fun ([|code2; code3|]) -> box(1m + (unbox<decimal> code2) +  (unbox<decimal> code3))); parameters=["code2"; "code3"] }
-        | "1m + code2" -> {func= (fun ([|code2|]) -> box(1m + (unbox<decimal> code2))); parameters=["code2"] }
+        | "1m + code2 + code3" -> {
+                func = function 
+                        | ([|code2; code3|]) -> box(1m + (unbox<decimal> code2) +  (unbox<decimal> code3)) 
+                        | _ -> raise (Exception "Invalid arguments") 
+                parameters=["code2"; "code3"]
+            }
+        | "1m + code2" -> {
+                func= function
+                    | ([|code2|]) -> box(1m + (unbox<decimal> code2))
+                    | _ -> raise (Exception "Invalid arguments") 
+                parameters=["code2"] 
+            }
         | _ -> {func= (fun _ -> (1:>obj)); parameters= []}
 
     let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
-          let! elemDefinitionCache = loadElemDefinitions ()
+        let! elemDefinitionCache = loadElemDefinitions ()
 
-          let! value1::value2::_ = evaluateElems elemDefinitionCache [code1; code2] ctx
+        let! result = evaluateElems elemDefinitionCache [code1; code2] ctx
 
-          return (value1, value2)
+        return 
+            match result with
+            | value1::value2::_ -> (value1, value2)
+            | _ -> raise (Exception "Invalid result") 
       }
 
     // Act
@@ -138,34 +152,6 @@ let ``It shoud evaluate formula with params`` () =
     let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let expected1:Result<obj, string> = Ok (10m:>obj)
-    result1 |> should equal expected1
+    result1 |> should equal (Ok (10m :> obj) : Result<obj, string>)
+    result2 |> should equal (Ok (4m :> obj)  : Result<obj, string>)
 
-    let expected2:Result<obj, string> = Ok (4m:>obj)
-    result2 |> should equal expected2
-
-[<Fact>]
-let ``It shoud evaluate formula with params (integration)`` () =
-    
-    // Arrange
-    let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
-
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1000m:> obj)), PayrollCalculus.Application.FormulaParser.handle)
-    let interpreter = NBB.Core.Effects.Interpreter(factory)
-
-    let eff = effect {
-          let! elemDefinitionCache = PayrollCalculus.Data.DataAccess.loadElemDefinitions ()
-          let! value1::value2::_ = evaluateElems elemDefinitionCache [ElemCode "SalariuNet"; ElemCode "Impozit"] ctx
-
-          return (value1, value2)
-      }
-
-    // Act
-    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
-
-    // Assert
-    let expected1:Result<obj, string> = Ok (900m:>obj)
-    result1 |> should equal expected1
-
-    let expected2:Result<obj, string> = Ok (100m:>obj)
-    result2 |> should equal expected2

@@ -84,6 +84,13 @@ module Domain =
         let sequenceEffect result = traverseEffect id result
 
 
+    module ElemDefinitionRepo = 
+        type LoadDefinitionsSideEffect () =
+            interface ISideEffect<Map<ElemCode, ElemDefinition>>
+
+        let loadDefinitions = Effect.Of << LoadDefinitionsSideEffect 
+    
+
     module ElemValueRepo = 
         type LoadSideEffect = {
             definition: DbElemDefinition

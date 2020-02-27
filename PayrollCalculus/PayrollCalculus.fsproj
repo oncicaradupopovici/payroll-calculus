@@ -6,6 +6,8 @@
 
   <ItemGroup>
     
+    
+    
     <Compile Include="Infra.fs" />
     <Compile Include="DataStructures\Reader.fs" />
     <Compile Include="DataStructures\ReaderEffect.fs" />
@@ -17,13 +19,42 @@
     <Compile Include="Parser.fs" />
     <Compile Include="SideEffectHandlers\DataAccess.fs" />
     <Compile Include="SideEffectHandlers\FormulaParser.fs" />
+    <None Include="SQL\create_Hcm.sql" />
+    <None Include="SQL\create_PayrollCalculus.sql" />
+    
+    <None Include="SQL\createDb.ps1" />
+    
+    <None Include="App.config" />
   </ItemGroup>
 
   <ItemGroup>
     <PackageReference Include="DynamicExpresso.Core" Version="2.3.1" />
+    <PackageReference Include="FSharp.Configuration" Version="2.0.0-alpha2" />
     <PackageReference Include="FSharp.Data.SqlClient" Version="2.0.6" />
     <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.15" />
     <PackageReference Include="NReco.LambdaParser" Version="1.0.11" />
   </ItemGroup>
 
+  <ItemGroup>
+    <SqlFiles Include="**\*.sql" />
+    <BuildDbPsScript Include="SQL\createDb.ps1" />
+    <BuildDbSqlScripts Include="SQL\create_Hcm.sql" DbName="Hcm" />
+    <BuildDbSqlScripts Include="SQL\create_PayrollCalculus.sql" DbName="PayrollCalculus" />
+    <UpToDateCheckInput Include="@(SqlFiles)" />
+    <UpToDateCheckInput Include="@(BuildDbPsScript)" />
+    <UpToDateCheckInput Include="@(BuildDbSqlScripts)" />
+    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'SQL\%(DbName).mdf')" />
+    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'SQL\%(DbName).ldf')" />
+  </ItemGroup>
+
+  <Target Name="BuildDb" BeforeTargets="BeforeBuild" Inputs="@(BuildDbSqlScripts);@(BuildDbPsScript)" Outputs="SQL\%(BuildDbSqlScripts.DbName).mdf;SQL\%(BuildDbSqlScripts.DbName).ldf">
+    <Message Text="DB files missing or outdated. Building out database %(BuildDbSqlScripts.DbName) using script %(BuildDbSqlScripts.Identity)" Importance="High" />
+    <Exec Command="PowerShell -NoProfile -ExecutionPolicy Bypass -Command &quot;&amp; { @(BuildDbPsScript) -DbName %(BuildDbSqlScripts.DbName) -DbScript %(BuildDbSqlScripts.Identity) }&quot;" />
+  </Target>
+
+  <Target Name="TouchProjectFileIfSqlOrDbChanged" BeforeTargets="BeforeBuild" Inputs="@(SqlFiles);@(BuildDbPsScript);@(BuildDbSqlScripts)" Outputs="$(MSBuildProjectFile)">
+    <Message Text="SQL or DB files changed. Changing project file modification time to force recompilation." Importance="High" />
+    <Exec Command="PowerShell -NoProfile -ExecutionPolicy Bypass -Command &quot;(dir $(MSBuildProjectFile)).LastWriteTime = Get-Date&quot;" />
+  </Target>
+  
 </Project>

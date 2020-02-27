@@ -14,7 +14,7 @@ module Infra =
             member _.Handle(sideEffect, _cancellationToken) = 
                 match sideEffect with
                     | :? 'TSideEffect as sideEffect -> handlerFunc(sideEffect) |> Task.FromResult
-                    | _ -> raise (Exception "Wrong type")
+                    | _ -> failwith "Wrong type"
 
 
     type SideEffectHandlerFactory(handlerRegistrations: seq<HandlerRegistration>) =
@@ -27,8 +27,8 @@ module Infra =
                 | Some handler ->
                     match handler with 
                     | :?  ISideEffectHandler<ISideEffect<'TOutput>,'TOutput> as handler -> handler
-                    | _ -> raise (Exception "Wrong type")
-                | _ -> raise (Exception "Invalid handler")
+                    | _ -> failwith "Wrong type"
+                | _ -> failwith "Invalid handler"
 
     let toHandlerReg (func: HandlerFunc<'TSideEffect, 'TOutput>) : HandlerRegistration =
         (typeof<'TSideEffect>,  HandlerWrapper(func) :> ISideEffectHandler)      

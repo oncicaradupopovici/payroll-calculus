@@ -22,7 +22,7 @@ module Handlers =
            match (sideEffect) with
                 | :? LoadSideEffect as lse -> dbHandler(lse) :> obj
                 | :? ParseFormulaSideEffect as pfe -> formulaHandler (pfe) :> obj
-                | _ -> null
+                | _ -> failwith "Unhandled side effect"
 
     let getHandlerFactory (dbHandler, formulaHandler)  =
         { new ISideEffectHandlerFactory with
@@ -122,13 +122,13 @@ let ``It shoud evaluate formula with params`` () =
         | "1m + code2 + code3" -> {
                 func = function 
                         | ([|code2; code3|]) -> box(1m + (unbox<decimal> code2) +  (unbox<decimal> code3)) 
-                        | _ -> raise (Exception "Invalid arguments") 
+                        | _ -> failwith "Invalid arguments"
                 parameters=["code2"; "code3"]
             }
         | "1m + code2" -> {
                 func= function
                     | ([|code2|]) -> box(1m + (unbox<decimal> code2))
-                    | _ -> raise (Exception "Invalid arguments") 
+                    | _ -> failwith "Invalid arguments"
                 parameters=["code2"] 
             }
         | _ -> {func= (fun _ -> (1:>obj)); parameters= []}
@@ -144,7 +144,7 @@ let ``It shoud evaluate formula with params`` () =
         return 
             match result with
             | value1::value2::_ -> (value1, value2)
-            | _ -> raise (Exception "Invalid result") 
+            | _ -> failwith "Invalid result"
       }
 
     // Act

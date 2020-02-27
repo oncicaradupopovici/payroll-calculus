@@ -8,7 +8,7 @@ open NBB.Core.Effects.FSharp
 
 [<Fact>]
 let ``It shoud evaluate formula with params (integration)`` () =
-    
+    let t = System.Configuration.ConfigurationManager.AppSettings 
     // Arrange
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d")); YearMonth = {Year = 2009; Month = 1}}
  
@@ -26,7 +26,7 @@ let ``It shoud evaluate formula with params (integration)`` () =
         return 
             match result with
             | value1::value2::[] -> (value1, value2)
-            | _ -> raise (Exception "Invalid result") 
+            | _ -> failwith "Invalid result"
       }
 
     // Act

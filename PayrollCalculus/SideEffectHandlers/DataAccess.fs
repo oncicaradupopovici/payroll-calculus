@@ -5,15 +5,13 @@ module DataAccess =
     open FSharp.Data
     open PayrollCalculus.Domain
 
-    [<Literal>]
-    let connectionString = "Server=[SERVER];Database=[DB];User Id=[USER];Password=[PASS];"
+    
 
     module ElemDefinitionRepo =
+        [<Literal>]
+        let connectionString = "name=PayrollCalculus"
 
-        type SelectContractCommand = SqlCommandProvider<"
-            SELECT Code, [Type], DataType, [Table], [Column], Formula, FormulaDeps
-            FROM VW_ElemDefinitions
-            " , connectionString>
+        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , connectionString, DataDirectory = "SQL">
     
         let handleLoadDefinitions (_: ElemDefinitionRepo.LoadDefinitionsSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)
@@ -26,12 +24,12 @@ module DataAccess =
                         let elemCode = ElemCode(item.Code)
                         let elemDefinition =  
                             {
-                                Code = elemCode; 
+                                Code = elemCode;
                                 Type = 
                                     match item.Type with
                                     | Some "Formula" -> Formula {formula = item.Formula.Value; deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
                                     | Some "Db" -> Db { table = item.Table.Value; column = item.Column.Value}
-                                    | _ -> raise (Exception("DB configuration errror"))
+                                    | _ -> failwith "DB configuration errror"
                                 DataType = Type.GetType(item.DataType)
                             } 
                         
@@ -43,6 +41,11 @@ module DataAccess =
 
     module ElemValueRepo =
         open System.Data.SqlClient
+        open FSharp.Configuration
+
+        type Settings=AppSettings<"App.config">
+
+        let connectionString = Settings.ConnectionStrings.Hcm
 
         module SqlCommandHelper =
             let private exec connection bind (query: string) (parametres: (string * obj) list)  = 

@@ -3,17 +3,14 @@
 module DataAccess =
     open System
     open FSharp.Data
-    open PayrollCalculus.Domain
+    open PayrollCalculus.Domain  
 
-    
+
 
     module ElemDefinitionRepo =
-        [<Literal>]
-        let connectionString = "name=PayrollCalculus"
-
-        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , connectionString, DataDirectory = "SQL">
+        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "SQL">
     
-        let handleLoadDefinitions (_: ElemDefinitionRepo.LoadDefinitionsSideEffect)  =
+        let handleLoadDefinitions (connectionString: string) (_: ElemDefinitionRepo.LoadDefinitionsSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)
 
             let results = cmd.Execute ()
@@ -22,8 +19,7 @@ module DataAccess =
                 |> Seq.map (
                     fun item  -> 
                         let elemCode = ElemCode(item.Code)
-                        let elemDefinition =  
-                            {
+                        let elemDefinition = {
                                 Code = elemCode;
                                 Type = 
                                     match item.Type with
@@ -32,7 +28,6 @@ module DataAccess =
                                     | _ -> failwith "DB configuration errror"
                                 DataType = Type.GetType(item.DataType)
                             } 
-                        
                         (elemCode, elemDefinition)
                     )
                 |> Map.ofSeq
@@ -41,11 +36,6 @@ module DataAccess =
 
     module ElemValueRepo =
         open System.Data.SqlClient
-        open FSharp.Configuration
-
-        type Settings=AppSettings<"App.config">
-
-        let connectionString = Settings.ConnectionStrings.Hcm
 
         module SqlCommandHelper =
             let private exec connection bind (query: string) (parametres: (string * obj) list)  = 
@@ -58,9 +48,8 @@ module DataAccess =
             let execute connection = exec connection <| fun c -> c.ExecuteNonQuery() |> ignore
             let executeScalar connection = exec connection <| fun c -> c.ExecuteScalar()
 
-        let private executeCommand  = SqlCommandHelper.executeScalar connectionString
-
-        let handleLoadValue ({definition=definition; ctx=ctx} : ElemValueRepo.LoadSideEffect) : Result<obj, string> =
+        let handleLoadValue (connectionString: string) ({definition=definition; ctx=ctx} : ElemValueRepo.LoadSideEffect) : Result<obj, string> =
+            let executeCommand  = SqlCommandHelper.executeScalar connectionString   
             let {table=table; column=column} = definition
             let (PersonId personId) = ctx.PersonId
             let result = 

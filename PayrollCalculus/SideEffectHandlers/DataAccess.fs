@@ -3,8 +3,8 @@
 module DataAccess =
     open System
     open FSharp.Data
-    open PayrollCalculus.Domain  
-
+    open PayrollCalculus.DomainTypes  
+    open PayrollCalculus.SideEffects
 
 
     module ElemDefinitionRepo =

@@ -47,23 +47,23 @@ module StateEffects =
     let (<*>) = StateEffect.apply
     let (>>=) eff func = StateEffect.bind func eff
 
-[<CompilationRepresentationAttribute(CompilationRepresentationFlags.ModuleSuffix)>]
-module List =
-    let traverseStateEffect f list =
-        let pure' = StateEffect.pure'
-        let (<*>) = StateEffect.apply
-        let cons head tail = head :: tail  
-        let initState = pure' []
-        let folder head tail = pure' cons <*> (f head) <*> tail
-        List.foldBack folder list initState
+    [<RequireQualifiedAccess>]
+    module List =
+        let traverseStateEffect f list =
+            let pure' = StateEffect.pure'
+            let (<*>) = StateEffect.apply
+            let cons head tail = head :: tail  
+            let initState = pure' []
+            let folder head tail = pure' cons <*> (f head) <*> tail
+            List.foldBack folder list initState
 
-    let sequenceStateEffect list = traverseStateEffect id list
+        let sequenceStateEffect list = traverseStateEffect id list
 
-[<CompilationRepresentationAttribute(CompilationRepresentationFlags.ModuleSuffix)>]
-module Result = 
-      let traverseStateEffect (f: 'a-> StateEffect<'s, 'b>) (result:Result<'a,'e>) : StateEffect<'s, Result<'b, 'e>> = 
-          match result with
-              |Error err -> StateEffect.map Result.Error (StateEffect.pure' err)
-              |Ok v -> StateEffect.map Result.Ok (f v)
+    [<RequireQualifiedAccess>]
+    module Result = 
+          let traverseStateEffect (f: 'a-> StateEffect<'s, 'b>) (result:Result<'a,'e>) : StateEffect<'s, Result<'b, 'e>> = 
+              match result with
+                  |Error err -> StateEffect.map Result.Error (StateEffect.pure' err)
+                  |Ok v -> StateEffect.map Result.Ok (f v)
 
-      let sequenceStateEffect result = traverseStateEffect id result
+          let sequenceStateEffect result = traverseStateEffect id result

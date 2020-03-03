@@ -2,8 +2,8 @@
 
 module FormulaParser =
     open DynamicExpresso
-    open PayrollCalculus.Domain
-    open PayrollCalculus.Domain.Parser
+    open PayrollCalculus.DomainTypes
+    open PayrollCalculus.SideEffects.Parser
 
     let handle ({formula=formula; definitions=definitions}: ParseFormulaSideEffect) : ParseFormulaResult =
     

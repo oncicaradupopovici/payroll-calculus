@@ -9,10 +9,13 @@ open NBB.Core.Effects.FSharp
 open Xunit
 
 open PayrollCalculus
+open PayrollCalculus.SideEffects
 open PayrollCalculus.SideEffectHandlers
 open Infra
 open DataAccess
-open Domain
+open DomainTypes
+open DomainImpl
+
 
 let configuration =
     let configurationBuilder = 

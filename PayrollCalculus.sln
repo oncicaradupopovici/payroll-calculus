@@ -5,7 +5,9 @@ VisualStudioVersion = 16.0.29613.14
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PayrollCalculus", "PayrollCalculus\PayrollCalculus.fsproj", "{AFD114D5-CE9E-4604-8DFF-6B36B6FBA3CB}"
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PayrollCalculus.Tests", "PayrollCalculus.Tests\PayrollCalculus.Tests.fsproj", "{FC3CC358-2CC9-4F3E-9CF2-5AF6452D36E2}"
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PayrollCalculus.Tests", "PayrollCalculus.Tests\PayrollCalculus.Tests.fsproj", "{FC3CC358-2CC9-4F3E-9CF2-5AF6452D36E2}"
+EndProject
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PayrolCalculus.Migrations", "PayrolCalculus.Migrations\PayrolCalculus.Migrations.fsproj", "{CA8C553C-3E92-4238-A232-D78D9086613B}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -21,6 +23,10 @@ Global
 		{FC3CC358-2CC9-4F3E-9CF2-5AF6452D36E2}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{FC3CC358-2CC9-4F3E-9CF2-5AF6452D36E2}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{FC3CC358-2CC9-4F3E-9CF2-5AF6452D36E2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{CA8C553C-3E92-4238-A232-D78D9086613B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CA8C553C-3E92-4238-A232-D78D9086613B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CA8C553C-3E92-4238-A232-D78D9086613B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CA8C553C-3E92-4238-A232-D78D9086613B}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

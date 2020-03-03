@@ -5,18 +5,19 @@
   </PropertyGroup>
 
   <ItemGroup>
-    
-    
-    
-    <Compile Include="Infra.fs" />
+    <Compile Include="DataStructures\Result.fs" />
+    <Compile Include="DataStructures\Effect.fs" />
+    <Compile Include="DataStructures\Store.fs" />
     <Compile Include="DataStructures\Reader.fs" />
     <Compile Include="DataStructures\ReaderEffect.fs" />
-
     <Compile Include="DataStructures\State.fs" />
     <Compile Include="DataStructures\StateEffect.fs" />
-    <Compile Include="Domain.fs" />
-    <Compile Include="DataAccess.fs" />
-    <Compile Include="Parser.fs" />
+    <Compile Include="DomainTypes.fs" />
+    <Compile Include="SideEffects\Parser.fs" />
+    <Compile Include="SideEffects\DataAccess.fs" />
+    <Compile Include="DomainImpl.fs" />
+    <Compile Include="Infra.fs" />
+
     <Compile Include="SideEffectHandlers\DataAccess.fs" />
     <Compile Include="SideEffectHandlers\FormulaParser.fs" />
     <None Include="SQL\create_Hcm.sql" />

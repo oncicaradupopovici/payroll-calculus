@@ -38,8 +38,7 @@ module ReaderEffects =
     let (>>=) eff func = ReaderEffect.bind func eff
 
 
-namespace DataStructures.ReaderEff
-    open DataStructures
+    [<RequireQualifiedAccess>]
     module List =
         let traverseReaderEffect f list =
             let pure' = ReaderEffect.pure'

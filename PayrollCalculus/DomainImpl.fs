@@ -19,8 +19,8 @@ module DomainImpl =
          -> IEffect<Result<obj, string>>    // Output
 
 
-    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx -> IEffect<Result<obj, string> list>
-    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> IEffect<Result<obj, string> list list>
+    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx -> IEffect<Result<obj list, string>>
+    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> IEffect<Result<obj list list, string>>
 
     type private ComputeElem  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
 
@@ -82,9 +82,9 @@ module DomainImpl =
             effect {
                 let statefulElems = elemCodes |> List.traverseStateEffect (computeElem elemDefinitionCache)
                 let! (elems, _) = StateEffect.run statefulElems Map.empty
-                //let! results =  elems |> List.traverseEffect (fun elem -> Reader.run elem ctx)
                 let! results = ReaderEffect.run (elems |> List.sequenceReaderEffect) ctx
-                return results
+                let result = results |> List.sequenceResult
+                return result
             }
 
     let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
@@ -92,7 +92,8 @@ module DomainImpl =
             effect {
                 let x = evaluateElems elemDefinitionCache elemCodes 
                 let! results = ctxs |> List.traverseEffect (fun ctx -> ReaderEffect.run x ctx)
-                return results
+                let result = results |> List.sequenceResult
+                return result
             }
                   
 

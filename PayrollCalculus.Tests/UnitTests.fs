@@ -144,17 +144,11 @@ let ``It shoud evaluate formula with params`` () =
 
         let! result = evaluateElems elemDefinitionCache [code1; code2] ctx
 
-        return 
-            match result with
-            | value1::value2::_ -> (value1, value2)
-            | _ -> failwith "Invalid result"
-      }
+        return result
+    }
 
     // Act
-
-    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
+    let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    result1 |> should equal (Ok (10m :> obj) : Result<obj, string>)
-    result2 |> should equal (Ok (4m :> obj)  : Result<obj, string>)
-
+    result |> should equal (Ok ([10m :> obj; 4m :> obj]) : Result<obj list, string>)

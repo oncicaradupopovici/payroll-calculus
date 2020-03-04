@@ -14,8 +14,6 @@ open PayrollCalculus.SideEffectHandlers
 open Infra
 open DataAccess
 open DomainTypes
-open DomainImpl
-
 
 let configuration =
     let configurationBuilder = 
@@ -40,19 +38,11 @@ let ``It shoud evaluate formula with params (integration)`` () =
             ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
         ]
 
-    let eff = effect {
-        let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-        let! result = evaluateElems elemDefinitionCache [ElemCode "SalariuNet"; ElemCode "Impozit"] ctx
-
-        return 
-            match result with
-            | value1::value2::[] -> (value1, value2)
-            | _ -> failwith "Invalid result"
-      }
+    let eff = Application.Evaluation.evaluateCodes ["SalariuNet"; "Impozit"]  ctx
 
     // Act
-    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
+    let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
-    // Assert
-    result1 |> should equal (Ok (900m :> obj) : Result<obj, string>)
-    result2 |> should equal (Ok (100m :> obj) : Result<obj, string>)
+    // Assert  
+    result |> should equal (Ok ([900m :> obj; 100m :> obj]) : Result<obj list, string>)
+    

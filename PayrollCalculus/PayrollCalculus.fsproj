@@ -5,6 +5,7 @@
   </PropertyGroup>
 
   <ItemGroup>
+
     <Compile Include="DataStructures\Result.fs" />
     <Compile Include="DataStructures\Effect.fs" />
     <Compile Include="DataStructures\Store.fs" />
@@ -17,7 +18,7 @@
     <Compile Include="SideEffects\DataAccess.fs" />
     <Compile Include="DomainImpl.fs" />
     <Compile Include="Infra.fs" />
-
+    <Compile Include="Application\Evaluation.fs" />
     <Compile Include="SideEffectHandlers\DataAccess.fs" />
     <Compile Include="SideEffectHandlers\FormulaParser.fs" />
     <None Include="SQL\create_Hcm.sql" />

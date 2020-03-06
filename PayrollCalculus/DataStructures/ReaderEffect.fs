@@ -13,7 +13,8 @@ module ReaderEffect =
         fun s -> Effect.bind (fun a -> run (f a) s) (run m s)
     let apply (f: ReaderEffect<'s, ('t -> 'u)>) (m: ReaderEffect<'s, 't>) : ReaderEffect<'s, 'u> = 
         fun s -> Effect.bind (fun g -> Effect.map (fun (a: 't) -> (g a)) (run m s)) (f s)
-    let pure' x = fun _ -> Effect.pure' x
+    let pure' x = 
+        fun _ -> Effect.pure' x
     let lift (eff : IEffect<'t>) : ReaderEffect<'s, 't> =
         fun _ -> eff
     let hoist (reader : Reader<'s, 't>) : ReaderEffect<'s, 't> =
@@ -38,8 +39,7 @@ module ReaderEffects =
     let (>>=) eff func = ReaderEffect.bind func eff
 
 
-namespace DataStructures.ReaderEff
-    open DataStructures
+    [<RequireQualifiedAccess>]
     module List =
         let traverseReaderEffect f list =
             let pure' = ReaderEffect.pure'

@@ -35,22 +35,22 @@ module States =
     let (>>=) st func = State.bind func st
 
 
-module List =
-    let traverseState f list =
-        let pure' = State.pure'
-        let (<*>) = State.apply
-        let cons head tail = head :: tail  
-        let initState = pure' []
-        let folder head tail = pure' cons <*> (f head) <*> tail
-        List.foldBack folder list initState
+    module List =
+        let traverseState f list =
+            let pure' = State.pure'
+            let (<*>) = State.apply
+            let cons head tail = head :: tail  
+            let initState = pure' []
+            let folder head tail = pure' cons <*> (f head) <*> tail
+            List.foldBack folder list initState
 
-    let sequenceState list = traverseState id list
+        let sequenceState list = traverseState id list
   
 
-module Result = 
-      let traverseState (f: 'a-> State<'s, 'b>) (result:Result<'a,'e>) : State<'s, Result<'b, 'e>> = 
-          match result with
-              |Error err -> State.map Result.Error (State.pure' err)
-              |Ok v -> State.map Result.Ok (f v)
+    module Result = 
+          let traverseState (f: 'a-> State<'s, 'b>) (result:Result<'a,'e>) : State<'s, Result<'b, 'e>> = 
+              match result with
+                  |Error err -> State.map Result.Error (State.pure' err)
+                  |Ok v -> State.map Result.Ok (f v)
 
-      let sequenceState result = traverseState id result
+          let sequenceState result = traverseState id result

@@ -1,16 +1,19 @@
-module Tests
+module UnitTests
 
 open System
 open Xunit
-open PayrollCalculus.Domain
 open PayrollCalculus
+open DomainTypes   
+open DomainImpl
+open PayrollCalculus.SideEffects
 open FsUnit.Xunit
 open NBB.Core.Effects.FSharp
 open DataStructures
 
 module Handlers =
-    open Domain.ElemValueRepo
-    open Domain.Parser
+
+    open SideEffects.ElemValueRepo
+    open SideEffects.Parser
     open NBB.Core.Effects
     open System.Threading
 
@@ -22,7 +25,7 @@ module Handlers =
            match (sideEffect) with
                 | :? LoadSideEffect as lse -> dbHandler(lse) :> obj
                 | :? ParseFormulaSideEffect as pfe -> formulaHandler (pfe) :> obj
-                | _ -> null
+                | _ -> failwith "Unhandled side effect"
 
     let getHandlerFactory (dbHandler, formulaHandler)  =
         { new ISideEffectHandlerFactory with
@@ -39,7 +42,7 @@ let ``It shoud evaluate data access element`` () =
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Db {table="aa"; column ="bb"} })
+                   .Add(code1, {Code = code1; Type = Db {table="aa"; column ="bb"}; DataType= typeof<int> })
 
         Effect.pure' elemDefinitionCache
 
@@ -73,7 +76,7 @@ let ``It shoud evaluate formula without params`` () =
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Formula {formula="1 + 2"; deps =[]} })
+                   .Add(code1, {Code = code1; Type = Formula {formula="1 + 2"; deps =[]}; DataType= typeof<int> })
 
         Effect.pure' elemDefinitionCache
 
@@ -105,12 +108,13 @@ let ``It shoud evaluate formula with params`` () =
     let code1 = ElemCode "code1"
     let code2 = ElemCode "code2"
     let code3 = ElemCode "code3"
+
     let loadElemDefinitions () =
         let elemDefinitionCache : ElemDefinitionCache = 
                Map.empty
-                   .Add(code1, {Code = code1; Type = Formula {formula="1 + code2 + code3"; deps =[]} })
-                   .Add(code2, {Code = code2; Type = Db {table="aa"; column ="bb"} })
-                   .Add(code3, {Code = code3; Type = Formula {formula="1 + code2"; deps =[]} })           
+                   .Add(code1, {Code = code1; Type = Formula {formula="1m + code2 + code3"; deps =[]} ;DataType= typeof<decimal> })
+                   .Add(code2, {Code = code2; Type = Db {table="aa"; column ="bb"}; DataType= typeof<decimal>})
+                   .Add(code3, {Code = code3; Type = Formula {formula="1m + code2"; deps =[]; }; DataType= typeof<decimal> })           
 
         Effect.pure' elemDefinitionCache
 
@@ -118,28 +122,33 @@ let ``It shoud evaluate formula with params`` () =
 
     let formulaHandler ({formula=formula} : Parser.ParseFormulaSideEffect) : Parser.ParseFormulaResult =
         match formula with
-        | "1 + code2 + code3" -> {func= (fun ([|code2; code3|]) -> box(1 + (unbox<int> code2) +  (unbox<int> code3))); parameters=["code2"; "code3"] }
-        | "1 + code2" -> {func= (fun ([|code2|]) -> box(1 + (unbox<int> code2))); parameters=["code2"] }
+        | "1m + code2 + code3" -> {
+                func = function 
+                        | ([|code2; code3|]) -> box(1m + (unbox<decimal> code2) +  (unbox<decimal> code3)) 
+                        | _ -> failwith "Invalid arguments"
+                parameters=["code2"; "code3"]
+            }
+        | "1m + code2" -> {
+                func= function
+                    | ([|code2|]) -> box(1m + (unbox<decimal> code2))
+                    | _ -> failwith "Invalid arguments"
+                parameters=["code2"] 
+            }
         | _ -> {func= (fun _ -> (1:>obj)); parameters= []}
 
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , formulaHandler)
+    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
-          let! elemDefinitionCache = loadElemDefinitions ()
+        let! elemDefinitionCache = loadElemDefinitions ()
 
-          let! value1::value2::_ = evaluateElems elemDefinitionCache [code1; code2] ctx
+        let! result = evaluateElems elemDefinitionCache [code1; code2] ctx
 
-          return (value1, value2)
-      }
+        return result
+    }
 
     // Act
-
-    let (result1 , result2) = eff |> Effect.interpret interpreter |> Async.RunSynchronously
+    let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously
 
     // Assert
-    let expected1:Result<obj, string> = Ok (4:>obj)
-    result1 |> should equal expected1
-
-    let expected2:Result<obj, string> = Ok (1:>obj)
-    result2 |> should equal expected2
+    result |> should equal (Ok ([10m :> obj; 4m :> obj]) : Result<obj list, string>)

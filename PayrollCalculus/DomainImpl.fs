@@ -83,7 +83,7 @@ module DomainImpl =
             effect {
                 let statefulElems = elemCodes |> traverse (computeElem elemDefinitionCache)
                 let! (elems, _) = StateT.run statefulElems Map.empty
-                let! results = elems |> traverse (fun elem -> ReaderT.run elem ctx)
+                let! results = ReaderT.run (elems |> sequence) ctx
                 let result = results |> sequence
                 return result
             }

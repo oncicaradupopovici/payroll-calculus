@@ -2,9 +2,8 @@
 
 open System
 open NBB.Core.Effects.FSharp
-open NBB.Core.Effects
 open DataStructures
-
+open FSharpPlus
 
 module DomainTypes =
     type ElemDefinition = {
@@ -26,7 +25,7 @@ module DomainTypes =
                 | None -> "could not find definition" |> Result.Error
                 | Some elemDefinition -> Result.Ok elemDefinition
 
-    type Elem<'T> = ComputationCtx -> IEffect<Result<'T,string>>
+    type Elem<'T> = ComputationCtx -> Effect<Result<'T,string>> //Data.ReaderT<ComputationCtx, Effect<Result<'T,string>>> 
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -38,18 +37,19 @@ module DomainTypes =
     and PersonId = PersonId of Guid
 
     module Elem = 
-        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) (ctx:ComputationCtx) =
-                arr 
-                    |> Array.map (fun fn -> fn ctx)
-                    |> Array.toList 
-                    |> List.sequenceEffect
-                    |> Effect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+        open FSharpPlus.Data
+        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) (ctx:ComputationCtx) : Effect<Result<obj, string>> =
+            arr 
+                |> map ((|>) ctx)
+                |> Array.toList
+                |> List.sequence
+                |> map (List.sequence >> map (List.toArray >> func))
 
-        let flattenResult (elem:Elem<Result<'a,string>>) :Elem<'a> = elem >> Effect.map (Result.bind id)
+        let flattenResult (elem:Elem<Result<'a,string>>) :Elem<'a> = elem >> map join
                     
     type ElemValuesCache = Map<ElemCode, obj>
 
-    type ElemCache = Map<ElemCode,Elem<obj>>
+    type ElemCache = Map<ElemCode, Elem<obj>>
 
     module Result = 
         let traverseElem (f: 'a-> Elem<'c>) (result:Result<'a,'b>) : Elem<Result<'c, 'b>> = 

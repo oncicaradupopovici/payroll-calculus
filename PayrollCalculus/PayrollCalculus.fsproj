@@ -33,7 +33,8 @@
     <PackageReference Include="DynamicExpresso.Core" Version="2.3.1" />
     <PackageReference Include="FSharp.Configuration" Version="2.0.0-alpha2" />
     <PackageReference Include="FSharp.Data.SqlClient" Version="2.0.6" />
-    <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.15" />
+    <PackageReference Include="FSharpPlus" Version="1.1.0-RC3" />
+    <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.16" />
     <PackageReference Include="NReco.LambdaParser" Version="1.0.11" />
   </ItemGroup>
 

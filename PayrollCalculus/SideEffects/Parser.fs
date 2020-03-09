@@ -15,4 +15,4 @@ module Parser =
         parameters: string list
     }
 
-    let parseFormula definitions formula = Effect.Of {formula=formula; definitions=definitions}
+    let parseFormula definitions formula = (Effect.Of {formula=formula; definitions=definitions}) |> Effect.wrap

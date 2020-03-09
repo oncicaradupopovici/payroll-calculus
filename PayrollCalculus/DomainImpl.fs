@@ -51,9 +51,9 @@ module DomainImpl =
                     let! elemResult = 
                         elemCode 
                         |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
-                        |> Result.traverseStateEffect matchElemDefinition
+                        |> Result.traverse matchElemDefinition
 
-                    return elemResult |> Result.sequenceElem |> Elem.flattenResult
+                    return elemResult |> Result.sequence |> map (Result.sequence >> map join)
                 }
 
             let result =
@@ -84,8 +84,6 @@ module DomainImpl =
                 let statefulElems = elemCodes |> traverse (computeElem elemDefinitionCache)
                 let! (elems, _) = StateT.run statefulElems Map.empty
                 let! results = elems |> traverse (fun elem -> elem ctx)
-                //let! results = ReaderEffect.run (elems |> List.sequenceReaderEffect) ctx
-
                 let result = results |> sequence
                 return result
             }

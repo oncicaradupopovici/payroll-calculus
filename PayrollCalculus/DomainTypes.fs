@@ -25,7 +25,7 @@ module DomainTypes =
                 | None -> "could not find definition" |> Result.Error
                 | Some elemDefinition -> Result.Ok elemDefinition
 
-    type Elem<'T> = ComputationCtx -> Effect<Result<'T,string>> //Data.ReaderT<ComputationCtx, Effect<Result<'T,string>>> 
+    type Elem<'T> = ComputationCtx -> Effect<Result<'T,string>>
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -50,14 +50,3 @@ module DomainTypes =
     type ElemValuesCache = Map<ElemCode, obj>
 
     type ElemCache = Map<ElemCode, Elem<obj>>
-
-    module Result = 
-        let traverseElem (f: 'a-> Elem<'c>) (result:Result<'a,'b>) : Elem<Result<'c, 'b>> = 
-            let pure' x = fun ctx -> Effect.pure' x
-            let map f elem = elem >> Effect.map f
-
-            match result with
-                |Error err -> map Result.Error (pure' err)
-                |Ok v -> map Result.Ok (f v)
-
-        let sequenceElem result = traverseElem id result

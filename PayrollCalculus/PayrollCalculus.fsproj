@@ -7,12 +7,6 @@
   <ItemGroup>
 
     <Compile Include="DataStructures\Result.fs" />
-    <Compile Include="DataStructures\Effect.fs" />
-    <Compile Include="DataStructures\Store.fs" />
-    <Compile Include="DataStructures\Reader.fs" />
-    <Compile Include="DataStructures\ReaderEffect.fs" />
-    <Compile Include="DataStructures\State.fs" />
-    <Compile Include="DataStructures\StateEffect.fs" />
     <Compile Include="DomainTypes.fs" />
     <Compile Include="SideEffects\Parser.fs" />
     <Compile Include="SideEffects\DataAccess.fs" />

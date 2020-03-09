@@ -4,6 +4,7 @@ open System
 open NBB.Core.Effects.FSharp
 open DataStructures
 open FSharpPlus
+open FSharpPlus.Data
 
 module DomainTypes =
     type ElemDefinition = {
@@ -25,7 +26,7 @@ module DomainTypes =
                 | None -> "could not find definition" |> Result.Error
                 | Some elemDefinition -> Result.Ok elemDefinition
 
-    type Elem<'T> = ComputationCtx -> Effect<Result<'T,string>>
+    type Elem<'T> = ReaderT<ComputationCtx, Effect<Result<'T,string>>>
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -38,14 +39,12 @@ module DomainTypes =
 
     module Elem = 
         open FSharpPlus.Data
-        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) (ctx:ComputationCtx) : Effect<Result<obj, string>> =
+        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) : Elem<obj> =
             arr 
-                |> map ((|>) ctx)
-                |> Array.toList
-                |> List.sequence
-                |> map (List.sequence >> map (List.toArray >> func))
+            |> Array.toList
+            |> List.sequence
+            |> map (List.sequence >> map (List.toArray >> func))
 
-        let flattenResult (elem:Elem<Result<'a,string>>) :Elem<'a> = elem >> map join
                     
     type ElemValuesCache = Map<ElemCode, obj>
 

@@ -36,14 +36,14 @@ module DomainImpl =
             let computeFormula ({formula=formula}: FormulaElemDefinition)  =
                 monad {
                     let! {func=func;parameters=parameters} = formula |> Parser.parseFormula elemDefinitionCache |> lift
-                    let! paramElems =  parameters |> traverse (ElemCode >> computeElem elemDefinitionCache)
-                    
+                    let! paramElems =  parameters |> traverse (ElemCode >> computeElem elemDefinitionCache)                    
+
                     return paramElems |> List.toArray |> Elem.liftFunc func
                 }
                
             let matchElemDefinition elemDefinition = 
                 match elemDefinition.Type with
-                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> result |> lift
+                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> ReaderT |> result |> lift
                 | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
 
             let compute() = 
@@ -53,7 +53,7 @@ module DomainImpl =
                         |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
                         |> Result.traverse matchElemDefinition
 
-                    return elemResult |> Result.sequence |> map (Result.sequence >> map join)
+                    return elemResult |> Result.sequence |> map join
                 }
 
             let result =
@@ -75,7 +75,7 @@ module DomainImpl =
         fun elemDefinitionCache elemCode ctx ->
             effect {
                 let! (elem, _) = StateT.run (computeElem elemDefinitionCache elemCode) Map.empty
-                return! elem ctx
+                return! ReaderT.run elem ctx
             }
         
     let evaluateElems : EvaluateElems = 
@@ -83,7 +83,7 @@ module DomainImpl =
             effect {
                 let statefulElems = elemCodes |> traverse (computeElem elemDefinitionCache)
                 let! (elems, _) = StateT.run statefulElems Map.empty
-                let! results = elems |> traverse (fun elem -> elem ctx)
+                let! results = elems |> traverse (fun elem -> ReaderT.run elem ctx)
                 let result = results |> sequence
                 return result
             }

@@ -8,7 +8,7 @@ module ElemDefinitionRepo =
     type LoadDefinitionsSideEffect () =
         interface ISideEffect<Map<ElemCode, ElemDefinition>>
 
-    let loadDefinitions = Effect.Of << LoadDefinitionsSideEffect 
+    let loadDefinitions () = (Effect.Of  (LoadDefinitionsSideEffect ())) |> Effect.wrap
 
 
 module ElemValueRepo = 
@@ -18,4 +18,4 @@ module ElemValueRepo =
     }
     with interface ISideEffect<Result<obj, string>>
 
-    let load definition ctx = Effect.Of {definition=definition; ctx=ctx}
+    let load definition ctx = (Effect.Of {definition=definition; ctx=ctx}) |> Effect.wrap

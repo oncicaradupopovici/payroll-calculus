@@ -7,12 +7,6 @@
   <ItemGroup>
 
     <Compile Include="DataStructures\Result.fs" />
-    <Compile Include="DataStructures\Effect.fs" />
-    <Compile Include="DataStructures\Store.fs" />
-    <Compile Include="DataStructures\Reader.fs" />
-    <Compile Include="DataStructures\ReaderEffect.fs" />
-    <Compile Include="DataStructures\State.fs" />
-    <Compile Include="DataStructures\StateEffect.fs" />
     <Compile Include="DomainTypes.fs" />
     <Compile Include="SideEffects\Parser.fs" />
     <Compile Include="SideEffects\DataAccess.fs" />
@@ -33,7 +27,8 @@
     <PackageReference Include="DynamicExpresso.Core" Version="2.3.1" />
     <PackageReference Include="FSharp.Configuration" Version="2.0.0-alpha2" />
     <PackageReference Include="FSharp.Data.SqlClient" Version="2.0.6" />
-    <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.15" />
+    <PackageReference Include="FSharpPlus" Version="1.1.0-RC3" />
+    <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.16" />
     <PackageReference Include="NReco.LambdaParser" Version="1.0.11" />
   </ItemGroup>
 

@@ -1,16 +1,13 @@
 ﻿namespace DataStructures
 
-[<AutoOpen>]
-module Results =
+open FSharpPlus
 
-    [<RequireQualifiedAccess>]
-    module List =
-        let traverseResult f list =
-            let pure' = Result.Ok
-            let (<*>) fn = Result.bind (fun x-> Result.map (fun f -> f x) fn) 
-            let cons head tail = head :: tail  
-            let initState = pure' []
-            let folder head tail = pure' cons <*> (f head) <*> tail
-            List.foldBack folder list initState
+[<RequireQualifiedAccess>]
+module Result =
+    let inline traverse (f: 'T->'``Applicative<'U>``) (res:Result<'T, 'E>) : '``Applicative<Result<'U, 'E>>`` = 
+        match res with
+            |Error err -> result (Error err)
+            |Ok v -> map Result.Ok (f v)
 
-        let sequenceResult list = traverseResult id list
+    let inline sequence (res: Result<'``Applicative<'T>``, 'E>) : '``Applicative<list<'T>, 'E>`` = 
+        traverse id res

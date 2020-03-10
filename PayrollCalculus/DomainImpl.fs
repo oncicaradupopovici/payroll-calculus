@@ -9,6 +9,7 @@ open DomainTypes
 open DataStructures
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
 open NBB.Core.FSharp.Data
+open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
 
 module DomainImpl =
     
@@ -23,8 +24,8 @@ module DomainImpl =
          -> Effect<Result<obj, string>>     // Output
 
 
-    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx -> Effect<Result<obj list, string>>
-    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
+    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
+    //type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
 
     type private ComputeElem  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
 
@@ -45,8 +46,26 @@ module DomainImpl =
                
             let matchElemDefinition elemDefinition = 
                 match elemDefinition.Type with
-                | Db(dbElemDefinition) -> dbElemDefinition |> ElemValueRepo.load |> Effect.pure' |> StateEffect.lift
+                | Db(dbElemDefinition) -> 
+                    dbElemDefinition |> ElemValueRepo.load |> ReaderStateEffect.hoistReaderEffect  |> Effect.pure' |> StateEffect.lift
                 | Formula(formulaElemDefinition) -> computeFormula formulaElemDefinition
+
+
+            let addCaching elem =
+                readerStateEffect {
+                    let! (valueCache: ElemValueCache) = ReaderStateEffect.get ()
+                    match (valueCache.TryFind elemCode) with
+                        | Some value -> 
+                            return Ok value
+                        | None -> 
+                            let! result = elem
+                            match result with 
+                            | Ok value ->
+                                do! ReaderStateEffect.modify(fun cache -> cache.Add (elemCode, value))
+                                return result
+                            | Error _ ->
+                                return result
+                }
 
             let compute() = 
                 stateEffect {
@@ -55,8 +74,8 @@ module DomainImpl =
                         |> ElemDefinitionCache.findElemDefinition elemDefinitionCache
                         |> Result.traverseStateEffect matchElemDefinition
 
-                    return elemResult |> Result.sequenceReaderEffect |> ReaderEffect.map (Result.join)
-                }
+                    return elemResult |> Result.sequenceReaderStateEffect |> ReaderStateEffect.map (Result.join) |> addCaching
+                }         
 
             stateEffect {
                 let! elemCache = StateEffect.get ()
@@ -65,9 +84,9 @@ module DomainImpl =
                 | Some elem -> 
                     return elem
                 | None -> 
-                    let! elem = compute ()
+                    let! elem = compute () 
                     do! StateEffect.modify(fun cache -> cache.Add (elemCode, elem))
-                    return elem        
+                    return elem     
             } 
 
 
@@ -75,7 +94,8 @@ module DomainImpl =
         fun elemDefinitionCache elemCode ctx ->
             effect {
                 let! (elem, _) = StateEffect.run (computeElem elemDefinitionCache elemCode) Map.empty
-                return! elem ctx
+                let! (elemValue, _) = ReaderStateEffect.run elem ctx Map.empty
+                return elemValue
             }
         
     let evaluateElems : EvaluateElems = 
@@ -83,19 +103,20 @@ module DomainImpl =
             effect {
                 let statefulElems = elemCodes |> List.traverseStateEffect (computeElem elemDefinitionCache)
                 let! (elems, _) = StateEffect.run statefulElems Map.empty
-                let! results =  ReaderEffect.run (elems |> List.sequenceReaderEffect) ctx 
-                let result = results |> List.sequenceResult
+                let! (elemValues, _) =  ReaderStateEffect.run (elems |> List.sequenceReaderStateEffect) ctx Map.empty
+                let result = elemValues |> List.sequenceResult
                 return result
+                
             }
 
-    let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
-        fun elemDefinitionCache elemCodes ctxs ->
-            effect {
-                let x = evaluateElems elemDefinitionCache elemCodes 
-                let! results = ctxs |> List.traverseEffect (ReaderEffect.run x)
-                let result = results |> List.sequenceResult
-                return result
-            }
+    //let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
+    //    fun elemDefinitionCache elemCodes ctxs ->
+    //        effect {
+    //            let x = evaluateElems elemDefinitionCache elemCodes 
+    //            let! results = ctxs |> List.traverseEffect (ReaderEffect.run x)
+    //            let result = results |> List.sequenceResult
+    //            return result
+    //        }
                   
 
 

@@ -5,6 +5,7 @@ open NBB.Core.Effects.FSharp
 open DataStructures
 open NBB.Core.FSharp.Data
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
+open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
 
 //open FSharpPlus
 
@@ -28,7 +29,9 @@ module DomainTypes =
                 | None -> "could not find definition" |> Result.Error
                 | Some elemDefinition -> Result.Ok elemDefinition
 
-    type Elem<'T> = ReaderEffect<ComputationCtx, Result<'T, string>>
+    type ElemValueCache = Map<ElemCode, obj>
+
+    type Elem<'T> = ReaderStateEffect<ComputationCtx, ElemValueCache, Result<'T, string>>
     and ComputationCtx = {
         PersonId: PersonId
         YearMonth: YearMonth
@@ -43,8 +46,8 @@ module DomainTypes =
         let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) : Elem<obj> =
             arr 
                 |> Array.toList
-                |> List.sequenceReaderEffect
-                |> ReaderEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+                |> List.sequenceReaderStateEffect
+                |> ReaderStateEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
 
                     
     type ElemValuesCache = Map<ElemCode, obj>

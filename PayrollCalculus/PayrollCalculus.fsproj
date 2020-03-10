@@ -6,6 +6,8 @@
 
   <ItemGroup>
 
+    <Compile Include="DataStructures\ReaderStateEffect.fs" />
+
     <Compile Include="DataStructures\StateEffect.fs" />
 
     <Compile Include="DataStructures\Result.fs" />

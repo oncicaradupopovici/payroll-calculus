@@ -29,7 +29,7 @@ module DomainTypes =
                 | None -> "could not find definition" |> Result.Error
                 | Some elemDefinition -> Result.Ok elemDefinition
 
-    type ElemValueCache = Map<ElemCode, obj>
+    type ElemValueCache = Map<ElemCode, Result<obj, string>>
 
     type Elem<'T> = ReaderStateEffect<ComputationCtx, ElemValueCache, Result<'T, string>>
     and ComputationCtx = {

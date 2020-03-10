@@ -55,17 +55,13 @@ module DomainImpl =
                 readerStateEffect {
                     let! (valueCache: ElemValueCache) = ReaderStateEffect.get ()
                     match (valueCache.TryFind elemCode) with
-                        | Some value -> 
-                            return Ok value
+                        | Some result -> 
+                            return result
                         | None -> 
                             let! result = elem
-                            match result with 
-                            | Ok value ->
-                                do! ReaderStateEffect.modify(fun cache -> cache.Add (elemCode, value))
-                                return result
-                            | Error _ ->
-                                return result
-                }
+                            do! ReaderStateEffect.modify(fun cache -> cache.Add (elemCode, result))
+                            return result
+                 }
 
             let compute() = 
                 stateEffect {

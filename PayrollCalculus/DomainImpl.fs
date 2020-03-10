@@ -88,14 +88,14 @@ module DomainImpl =
                 return result
             }
 
-    //let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
-    //    fun elemDefinitionCache elemCodes ctxs ->
-    //        effect {
-    //            let x = evaluateElems elemDefinitionCache elemCodes 
-    //            let! results = ctxs |> traverse (fun ctx -> ReaderEffect.run x ctx)
-    //            let result = results |> sequence
-    //            return result
-    //        }
+    let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
+        fun elemDefinitionCache elemCodes ctxs ->
+            effect {
+                let x = evaluateElems elemDefinitionCache elemCodes |> ReaderT
+                let! results = ctxs |> traverse (ReaderT.run x)
+                let result = results |> sequence
+                return result
+            }
                   
 
 

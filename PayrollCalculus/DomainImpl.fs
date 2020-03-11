@@ -25,7 +25,7 @@ module DomainImpl =
 
 
     type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
-    //type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
+    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
 
     type private ComputeElem  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
 
@@ -105,14 +105,14 @@ module DomainImpl =
                 
             }
 
-    //let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
-    //    fun elemDefinitionCache elemCodes ctxs ->
-    //        effect {
-    //            let x = evaluateElems elemDefinitionCache elemCodes 
-    //            let! results = ctxs |> List.traverseEffect (ReaderEffect.run x)
-    //            let result = results |> List.sequenceResult
-    //            return result
-    //        }
+    let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
+        fun elemDefinitionCache elemCodes ctxs ->
+            effect {
+                let x = evaluateElems elemDefinitionCache elemCodes 
+                let! results = ctxs |> List.traverseEffect (ReaderEffect.run x)
+                let result = results |> List.sequenceResult
+                return result
+            }
                   
 
 

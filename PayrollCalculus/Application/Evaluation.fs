@@ -5,8 +5,6 @@ module Evaluation =
     open PayrollCalculus.DomainTypes
     open PayrollCalculus.DomainImpl
     open PayrollCalculus.SideEffects
-    open DataStructures
-  
 
     let evaluate (code: string) (ctx: ComputationCtx) =
         effect {

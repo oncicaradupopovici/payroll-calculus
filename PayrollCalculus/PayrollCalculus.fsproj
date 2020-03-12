@@ -6,11 +6,15 @@
 
   <ItemGroup>
 
+    <Compile Include="DataStructures\ReaderState.fs" />
+
     <Compile Include="DataStructures\ReaderStateEffect.fs" />
 
     <Compile Include="DataStructures\StateEffect.fs" />
 
     <Compile Include="DataStructures\Result.fs" />
+
+    <Compile Include="DataStructures\Cache.fs" />
     <Compile Include="DomainTypes.fs" />
     <Compile Include="SideEffects\Parser.fs" />
     <Compile Include="SideEffects\DataAccess.fs" />

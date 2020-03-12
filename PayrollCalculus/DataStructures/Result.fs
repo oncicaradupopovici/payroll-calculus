@@ -1,4 +1,4 @@
-﻿namespace DataStructures
+﻿namespace PayrollCalculus.DataStructures
 
 [<RequireQualifiedAccess>]
 module Result =

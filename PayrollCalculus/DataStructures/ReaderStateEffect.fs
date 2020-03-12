@@ -4,6 +4,7 @@ open NBB.Core.Effects.FSharp
 open NBB.Core.FSharp.Data
 open NBB.Core.FSharp.Data.State
 open NBB.Core.FSharp.Data.Reader
+open NBB.Core.FSharp.Data.ReaderState
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
 open NBB.Core.Effects.FSharp.Data.StateEffect
 
@@ -26,6 +27,9 @@ module ReaderStateEffect =
                 return (f' a, s'')
             }
 
+    let ask () : ReaderStateEffect<'r, 's, 'r> = 
+        fun r s -> Effect.pure' (r, s)
+
     let get () : ReaderStateEffect<'r, 's, 's> = 
         fun _r s -> Effect.pure' (s, s)
 
@@ -44,11 +48,9 @@ module ReaderStateEffect =
     let pure' (a:'a) : ReaderStateEffect<'r, 's, 'a> = 
         a |> Effect.pure' |> lift
 
-    let hoistReaderEffect (reader: ReaderEffect<'r, 'a>): ReaderStateEffect<'r, 's, 'a> =
-        reader |> Reader.map StateEffect.lift
 
-    //let hoist (readerState: ReaderState<'s, 't>) : ReaderStateEffect<'r, 's, 't> =
-    //    fun r s -> Effect.pure' (ReaderState.run readerState r s)
+    let hoist (readerState: ReaderState<'r, 's, 'a>) : ReaderStateEffect<'r, 's, 'a> =
+        fun r s -> Effect.pure' (ReaderState.run readerState r s)
 
 module StateEffectBulder =
     type ReaderStateEffectBulder() =

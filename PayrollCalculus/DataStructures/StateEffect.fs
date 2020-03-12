@@ -1,4 +1,4 @@
-﻿namespace DataStructures
+﻿namespace PayrollCalculus.DataStructures
 
 open NBB.Core.Effects.FSharp.Data.StateEffect
 

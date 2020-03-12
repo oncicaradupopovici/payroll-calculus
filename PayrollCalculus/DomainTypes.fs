@@ -2,10 +2,10 @@
 
 open System
 open NBB.Core.Effects.FSharp
-open DataStructures
 open NBB.Core.FSharp.Data
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
 open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
+open PayrollCalculus.DataStructures
 
 //open FSharpPlus
 
@@ -48,7 +48,11 @@ module DomainTypes =
                 |> Array.toList
                 |> List.sequenceReaderStateEffect
                 |> ReaderStateEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
-
+        
+        let flattenResult (elemResult: Result<Elem<obj>, string>) : Elem<obj> = 
+            elemResult
+                |> Result.sequenceReaderStateEffect 
+                |> ReaderStateEffect.map (Result.join)
                     
     type ElemValuesCache = Map<ElemCode, obj>
 

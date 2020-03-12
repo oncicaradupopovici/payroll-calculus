@@ -1,4 +1,4 @@
-﻿namespace PayrollCalculus
+﻿namespace PayrollCalculus.Domain
 
 open System
 open NBB.Core.Effects.FSharp

@@ -15,11 +15,14 @@
     <Compile Include="DataStructures\Result.fs" />
 
     <Compile Include="DataStructures\Cache.fs" />
-    <Compile Include="DomainTypes.fs" />
-    <Compile Include="SideEffects\Parser.fs" />
-    <Compile Include="SideEffects\DataAccess.fs" />
-    <Compile Include="DomainImpl.fs" />
-    <Compile Include="Infra.fs" />
+
+    <Compile Include="Domain\DomainTypes.fs" />
+
+    <Compile Include="Domain\SideEffects\Parser.fs" />
+
+    <Compile Include="Domain\SideEffects\DataAccess.fs" />
+
+    <Compile Include="Domain\DomainImpl.fs" />
     <Compile Include="Application\Evaluation.fs" />
     <Compile Include="SideEffectHandlers\DataAccess.fs" />
     <Compile Include="SideEffectHandlers\FormulaParser.fs" />
@@ -27,6 +30,8 @@
     <None Include="SQL\create_PayrollCalculus.sql" />
     
     <None Include="SQL\createDb.ps1" />
+    
+    <Compile Include="Infra.fs" />
     
     <None Include="App.config" />
   </ItemGroup>

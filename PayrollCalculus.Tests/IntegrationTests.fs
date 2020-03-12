@@ -9,7 +9,8 @@ open NBB.Core.Effects.FSharp
 open Xunit
 
 open PayrollCalculus
-open PayrollCalculus.SideEffects
+open PayrollCalculus.Domain
+open PayrollCalculus.Domain.SideEffects
 open PayrollCalculus.SideEffectHandlers
 open Infra
 open DataAccess

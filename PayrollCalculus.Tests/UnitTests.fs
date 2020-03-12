@@ -2,13 +2,14 @@ module UnitTests
 
 open System
 open Xunit
-open PayrollCalculus
+open PayrollCalculus.DataStructures
+open PayrollCalculus.Domain
+open PayrollCalculus.Domain.SideEffects
 open DomainTypes   
 open DomainImpl
-open PayrollCalculus.SideEffects
+
 open FsUnit.Xunit
 open NBB.Core.Effects.FSharp
-open DataStructures
 
 module Handlers =
 

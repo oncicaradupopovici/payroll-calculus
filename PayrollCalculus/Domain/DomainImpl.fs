@@ -1,12 +1,11 @@
-﻿namespace PayrollCalculus
+﻿namespace PayrollCalculus.Domain
 
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects.FSharp.Data
 open NBB.Core.FSharp.Data.ReaderState
 open NBB.Core.Effects.FSharp.Data.StateEffect
-open PayrollCalculus.SideEffects
+open PayrollCalculus.Domain.SideEffects
 open PayrollCalculus.DataStructures
-open Parser
 open DomainTypes
 open Cache
 open NBB.Core.Effects.FSharp.Data.ReaderEffect

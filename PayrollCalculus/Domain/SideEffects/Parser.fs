@@ -1,6 +1,6 @@
-﻿namespace PayrollCalculus.SideEffects
+﻿namespace PayrollCalculus.Domain.SideEffects
 
-open PayrollCalculus.DomainTypes
+open PayrollCalculus.Domain.DomainTypes
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
 

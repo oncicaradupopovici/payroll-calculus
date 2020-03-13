@@ -2,11 +2,9 @@
 
 module Evaluation =
     open NBB.Core.Effects.FSharp
-    open PayrollCalculus.DomainTypes
-    open PayrollCalculus.DomainImpl
-    open PayrollCalculus.SideEffects
-    open DataStructures
-  
+    open PayrollCalculus.Domain.DomainTypes
+    open PayrollCalculus.Domain.DomainImpl
+    open PayrollCalculus.Domain.SideEffects
 
     let evaluate (code: string) (ctx: ComputationCtx) =
         effect {

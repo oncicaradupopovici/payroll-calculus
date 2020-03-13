@@ -14,11 +14,14 @@ module HandlerUtils =
     let setError errorText = 
         (clearResponse >=> setStatusCode 500 >=> text errorText)
 
-    let interpret<'TResult> (effect: Effect<HttpHandler>) : HttpHandler =
+    let interpret<'TResult> (resultHandler: 'TResult -> HttpHandler) (effect: Effect<'TResult>) : HttpHandler =
         fun (next : HttpFunc) (ctx : HttpContext) ->
             task {
                 let interpreter = ctx.RequestServices.GetRequiredService<IInterpreter>()
-                let! handler = interpreter.Interpret(effect |> Effect.unWrap)
-                return! handler next ctx
+                let! result = interpreter.Interpret(effect |> Effect.unWrap)
+                return! (result |> resultHandler) next ctx
             }   
 
+    let jsonResult = function
+        | Ok value -> json value
+        | Error err -> setError err

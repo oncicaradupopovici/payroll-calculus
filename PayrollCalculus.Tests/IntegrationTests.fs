@@ -15,6 +15,7 @@ open PayrollCalculus.SideEffectHandlers
 open Infra
 open DataAccess
 open DomainTypes
+open PayrollCalculus.PublishedLanguage.Queries
 
 let configuration =
     let configurationBuilder = 
@@ -31,6 +32,7 @@ let hcmConnectionString = configuration.GetConnectionString "Hcm"
 let ``It shoud evaluate formula with params (integration)`` () =
 
     // Arrange
+    let query = EvaluateMultipleCodes (["SalariuNet"; "Impozit"], Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d"), 2009, 1)
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d")); YearMonth = {Year = 2009; Month = 1}}
 
     let interpreter = interpreter [
@@ -39,7 +41,7 @@ let ``It shoud evaluate formula with params (integration)`` () =
             ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
         ]
 
-    let eff = Application.Evaluation.evaluateCodes ["SalariuNet"; "Impozit"]  ctx
+    let eff = Application.Evaluation.handleEvaluateMultipleCodes query
 
     // Act
     let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously

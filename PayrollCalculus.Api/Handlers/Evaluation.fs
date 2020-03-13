@@ -6,7 +6,7 @@ open PayrollCalculus
 open PayrollCalclulus.Api
 
 open HandlerUtils
-open DomainTypes
+open Domain.DomainTypes
 open Giraffe
 
 

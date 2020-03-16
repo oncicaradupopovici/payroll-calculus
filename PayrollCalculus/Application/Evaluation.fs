@@ -1,23 +1,37 @@
-﻿namespace PayrollCalculus.Application
+﻿namespace PayrollCalculus.Application.Evaluation
 
-module Evaluation =
-    open NBB.Core.Effects.FSharp
-    open PayrollCalculus.Domain.DomainTypes
-    open PayrollCalculus.Domain.DomainImpl
-    open PayrollCalculus.Domain.SideEffects
+open System
+open NBB.Core.Effects.FSharp
+open PayrollCalculus.Domain.DomainTypes
+open PayrollCalculus.Domain.SideEffects
+open PayrollCalculus.Domain.DomainImpl
 
-    let evaluate (code: string) (ctx: ComputationCtx) =
-        effect {
-            let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-            let! result = evaluateElem elemDefinitionCache (ElemCode code) ctx
+module SingleCodeEvaluation =
+    type Query =
+        {ElemCode:string; PersonId: Guid; Year: int; Month: int}
 
-            return result;
-        }
+    let handler (query: Query) =
+           let code = ElemCode query.ElemCode
+           let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
-    let evaluateCodes (codes: string list) (ctx: ComputationCtx) =
-        effect {
-            let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-            let! result = evaluateElems elemDefinitionCache (codes |> List.map ElemCode) ctx
+           effect {
+               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
+               let! result = evaluateElem elemDefinitionCache code ctx
 
-            return result;
-        }
+               return result;
+           }
+
+module MultipleCodesEvaluation =
+    type Query =
+        {ElemCodes:string list; PersonId: Guid; Year: int; Month: int}
+
+    let handler (query: Query) =
+           let codes =  query.ElemCodes |> List.map ElemCode
+           let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
+
+           effect {
+               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
+               let! result = evaluateElems elemDefinitionCache codes ctx
+
+               return result;
+           }

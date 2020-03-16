@@ -1,11 +1,11 @@
-﻿namespace PayrollCalculus
+﻿namespace PayrollCalculus.Infra
 
 open System
 open NBB.Core.Effects
 open NBB.Core.Effects.FSharp
 open System.Threading.Tasks
 
-module Infra =
+module Interpreter =
     type HandlerFunc<'TSideEffect, 'TOutput when 'TSideEffect:> ISideEffect<'TOutput>> = ('TSideEffect -> 'TOutput)
     type HandlerRegistration = (Type * ISideEffectHandler)
     
@@ -39,8 +39,7 @@ module Infra =
     let show interpreter eff = eff |> Effect.interpret interpreter |> Async.RunSynchronously |> printfn "%A"
 
 
-
-
+    
     //module HandlerBuilder =
     //    let empty : HandlerRegistration list = []
     //    let add (func: HandlerFunc<'TSideEffect, 'TOutput>) (handlerRegistrations: HandlerRegistration list) =

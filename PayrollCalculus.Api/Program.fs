@@ -11,10 +11,9 @@ open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
 open NBB.Core.Effects
-open PayrollCalculus
-open PayrollCalculus.SideEffectHandlers
+open PayrollCalculus.Infra
 open DataAccess
-open Infra
+open Interpreter
 
 // ---------------------------------
 // Web app

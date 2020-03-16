@@ -1,4 +1,4 @@
-﻿namespace PayrollCalculus.SideEffectHandlers
+﻿namespace PayrollCalculus.Infra
 
 module FormulaParser =
     open DynamicExpresso

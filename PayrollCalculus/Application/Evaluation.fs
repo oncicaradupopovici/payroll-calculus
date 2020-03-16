@@ -1,35 +1,37 @@
-﻿namespace PayrollCalculus.Application
+﻿namespace PayrollCalculus.Application.Evaluation
 
-open PayrollCalculus.PublishedLanguage.Queries
+open System
+open NBB.Core.Effects.FSharp
+open PayrollCalculus.Domain.DomainTypes
+open PayrollCalculus.Domain.SideEffects
+open PayrollCalculus.Domain.DomainImpl
 
-module Evaluation =
-    open NBB.Core.Effects.FSharp
-    open PayrollCalculus.Domain.DomainTypes
-    open PayrollCalculus.Domain.DomainImpl
-    open PayrollCalculus.Domain.SideEffects
-       
-    let handleEvaluateSingleCode (query: EvaluateSingleCode) =
-        let code = ElemCode query.ElemCode
-        let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
+module SingleCodeEvaluation =
+    type Query =
+        {ElemCode:string; PersonId: Guid; Year: int; Month: int}
 
-        effect {
-            let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-            let! result = evaluateElem elemDefinitionCache code ctx
+    let handler (query: Query) =
+           let code = ElemCode query.ElemCode
+           let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
-            return result;
-        }
+           effect {
+               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
+               let! result = evaluateElem elemDefinitionCache code ctx
 
-    let handleEvaluateMultipleCodes (query: EvaluateMultipleCodes) =
-        let codes = query.ElemCodes |> List.map ElemCode
-        let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
+               return result;
+           }
 
-        effect {
-            let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-            let! result = evaluateElems elemDefinitionCache codes ctx
+module MultipleCodesEvaluation =
+    type Query =
+        {ElemCodes:string list; PersonId: Guid; Year: int; Month: int}
 
-            return result;
-        }
+    let handler (query: Query) =
+           let codes =  query.ElemCodes |> List.map ElemCode
+           let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
-    //let handle  = function
-    //    | EvaluateSingleCode q -> handleEvaluateSingleCode q
-    //    | EvaluateMultipleCodes q -> handleEvaluateMultipleCodes q
+           effect {
+               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
+               let! result = evaluateElems elemDefinitionCache codes ctx
+
+               return result;
+           }

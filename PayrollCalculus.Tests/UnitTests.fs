@@ -2,7 +2,6 @@ module UnitTests
 
 open System
 open Xunit
-open PayrollCalculus.DataStructures
 open PayrollCalculus.Domain
 open PayrollCalculus.Domain.SideEffects
 open DomainTypes   

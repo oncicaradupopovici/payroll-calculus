@@ -5,9 +5,6 @@ open NBB.Core.Effects.FSharp
 open NBB.Core.FSharp.Data
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
 open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
-open PayrollCalculus.DataStructures
-
-//open FSharpPlus
 
 module DomainTypes =
     type ElemDefinition = {

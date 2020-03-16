@@ -5,9 +5,7 @@ open NBB.Core.Effects.FSharp.Data
 open NBB.Core.FSharp.Data.ReaderState
 open NBB.Core.Effects.FSharp.Data.StateEffect
 open PayrollCalculus.Domain.SideEffects
-open PayrollCalculus.DataStructures
 open DomainTypes
-open Cache
 open NBB.Core.Effects.FSharp.Data.ReaderEffect
 open NBB.Core.FSharp.Data
 open NBB.Core.Effects.FSharp.Data.ReaderStateEffect

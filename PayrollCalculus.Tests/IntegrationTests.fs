@@ -32,9 +32,9 @@ let ``It shoud evaluate formula with params (integration)`` () =
         { ElemCodes = ["SalariuNet"; "Impozit"]; PersonId = Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d"); Year=2009; Month=1;}
 
     let interpreter = interpreter [
-            FormulaParser.handle                                        |> toHandlerReg;
-            ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-            ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
+            FormulaParser.parse                                                       |> toHandlerReg;
+            ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString  |> toHandlerReg;
+            ElemValueRepo.loadValue hcmConnectionString                               |> toHandlerReg;
         ]
 
     let eff = MultipleCodesEvaluation.handler query

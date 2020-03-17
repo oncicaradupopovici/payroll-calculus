@@ -37,43 +37,37 @@ module Elem =
 
 module Parser =
     type ParseFormulaSideEffect = {
-        formula:string;
-        definitions: ElemDefinitionCache;
+        Formula: string
+        ElemDefinitions: Map<ElemCode, ElemDefinition>
     }
     with interface ISideEffect<ParseFormulaResult>
     and ParseFormulaResult = {
-        func: obj [] -> obj
-        parameters: string list
+        Func: obj [] -> obj
+        Parameters: string list
     }
 
-    let parseFormula definitions formula = (Effect.Of {formula=formula; definitions=definitions}) |> Effect.wrap
-
-module ElemDefinitionRepo =
-    type LoadDefinitionsSideEffect () =
-        interface ISideEffect<Map<ElemCode, ElemDefinition>>
-
-    let loadDefinitions () = (Effect.Of  (LoadDefinitionsSideEffect ())) |> Effect.wrap
+    let parseFormula definitions formula = (Effect.Of {Formula=formula; ElemDefinitions=definitions}) |> Effect.wrap
 
 module ElemValueRepo = 
     type LoadSideEffect = {
-        definition: DbElemDefinition
-        ctx: ComputationCtx
+        Definition: DbElemDefinition
+        Ctx: ComputationCtx
     }
     with interface ISideEffect<Result<obj, string>>
 
-    let load definition ctx = (Effect.Of {definition=definition; ctx=ctx}) |> Effect.wrap
+    let load definition ctx = (Effect.Of {Definition=definition; Ctx=ctx}) |> Effect.wrap
                     
 
 
 module ElemComputingService =
 
-    type private ComputeElem  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
+    type private ComputeElem  = ElemDefinitionStore -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
     let rec private computeElem: ComputeElem =
-        fun elemDefinitionCache elemCode -> 
+        fun elemDefinitionStore elemCode -> 
             let buildFormulaElem ({formula=formula}: FormulaElemDefinition)  =
                 stateEffect {
-                    let! {func=func;parameters=parameters} = formula |> Parser.parseFormula elemDefinitionCache |> StateEffect.lift
-                    let! paramElems = parameters |> List.traverseStateEffect (ElemCode >> computeElem elemDefinitionCache)
+                    let! {Func=func;Parameters=parameters} = formula |> Parser.parseFormula elemDefinitionStore.ElemDefinitions |> StateEffect.lift
+                    let! paramElems = parameters |> List.traverseStateEffect (ElemCode >> computeElem elemDefinitionStore)
 
                     return Elem.liftFunc func (paramElems |> List.toArray)
                 }
@@ -90,7 +84,7 @@ module ElemComputingService =
 
             stateEffect {
                 let! elemResult = 
-                    ElemDefinitionCache.findElemDefinition elemDefinitionCache elemCode
+                    ElemDefinitionStore.findElemDefinition elemDefinitionStore elemCode
                     |> Result.traverseStateEffect buildElem
 
                 return elemResult 
@@ -99,31 +93,31 @@ module ElemComputingService =
 
             } |> StateEffect.addCaching elemCode     
 
-    type EvaluateElem = ElemDefinitionCache -> ElemCode -> ComputationCtx -> Effect<Result<obj, string>>
+    type EvaluateElem = ElemDefinitionStore -> ElemCode -> ComputationCtx -> Effect<Result<obj, string>>
     let evaluateElem : EvaluateElem = 
-        fun elemDefinitionCache elemCode ctx ->
+        fun elemDefinitionStore elemCode ctx ->
             effect {
-                let! (elem, _) = StateEffect.run (computeElem elemDefinitionCache elemCode) Map.empty
+                let! (elem, _) = StateEffect.run (computeElem elemDefinitionStore elemCode) Map.empty
                 let! (elemValue, _) = ReaderStateEffect.run elem ctx Map.empty
                 return elemValue
             }
        
-    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
+    type EvaluateElems = ElemDefinitionStore -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
     let evaluateElems : EvaluateElems = 
-        fun elemDefinitionCache elemCodes ctx ->
+        fun elemDefinitionStore elemCodes ctx ->
             effect {
-                let statefulElems = elemCodes |> List.traverseStateEffect (computeElem elemDefinitionCache)
+                let statefulElems = elemCodes |> List.traverseStateEffect (computeElem elemDefinitionStore)
                 let! (elems, _) = StateEffect.run statefulElems Map.empty
                 let! (elemValues, _) =  ReaderStateEffect.run (elems |> List.sequenceReaderStateEffect) ctx Map.empty
                 let result = elemValues |> List.sequenceResult
                 return result
             }
 
-    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
+    type EvaluateElemsMultipleContexts = ElemDefinitionStore -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
     let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
-        fun elemDefinitionCache elemCodes ctxs ->
+        fun elemDefinitionStore elemCodes ctxs ->
             effect {
-                let x = evaluateElems elemDefinitionCache elemCodes 
+                let x = evaluateElems elemDefinitionStore elemCodes 
                 let! results = ctxs |> List.traverseEffect (ReaderEffect.run x)
                 let result = results |> List.sequenceResult
                 return result

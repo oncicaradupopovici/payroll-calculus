@@ -7,6 +7,7 @@ open Giraffe.Serialization
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
@@ -49,7 +50,7 @@ module App =
                |> ignore
 
     let configureApp (app : IApplicationBuilder) =
-        let env = app.ApplicationServices.GetService<IHostingEnvironment>()
+        let env = app.ApplicationServices.GetService<IWebHostEnvironment>()
         (match env.IsDevelopment() with
         | true  -> app.UseDeveloperExceptionPage()
         | false -> app.UseGiraffeErrorHandler errorHandler)
@@ -61,9 +62,9 @@ module App =
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
         let interpreter = interpreter [
-                   FormulaParser.handle                                        |> toHandlerReg;
-                   ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-                   ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
+                   FormulaParser.parse                                                     |> toHandlerReg;
+                   ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString |> toHandlerReg;
+                   ElemValueRepo.loadValue hcmConnectionString                        |> toHandlerReg;
                ]
 
         services.AddCors()

@@ -33,7 +33,7 @@ module Interpreter =
     let toHandlerReg (func: HandlerFunc<'TSideEffect, 'TOutput>) : HandlerRegistration =
         (typeof<'TSideEffect>,  HandlerWrapper(func) :> ISideEffectHandler)      
 
-    let interpreter : (seq<HandlerRegistration> -> Interpreter) = 
+    let createInterpreter : (seq<HandlerRegistration> -> Interpreter) = 
          SideEffectHandlerFactory >> Interpreter
 
     let show interpreter eff = eff |> Effect.interpret interpreter |> Async.RunSynchronously |> printfn "%A"

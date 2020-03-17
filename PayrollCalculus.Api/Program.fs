@@ -61,11 +61,11 @@ module App =
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
-        let interpreter = interpreter [
-                   FormulaParser.parse                                                     |> toHandlerReg;
-                   ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString |> toHandlerReg;
-                   DbElemValue.loadValue hcmConnectionString                        |> toHandlerReg;
-               ]
+        let interpreter = createInterpreter [
+            FormulaParser.parse                                                         |> toHandlerReg;
+            ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString    |> toHandlerReg;
+            DbElemValue.loadValue hcmConnectionString                                 |> toHandlerReg;
+        ]
 
         services.AddCors()
             .AddGiraffe() 

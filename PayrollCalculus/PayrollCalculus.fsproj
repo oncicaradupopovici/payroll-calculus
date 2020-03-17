@@ -10,13 +10,14 @@
 
     <Compile Include="Domain\ElemComputingService.fs" />
     <Compile Include="Application\Evaluation.fs" />
+    <None Include="Infra\SQL\create_Hcm.sql" />
+    <None Include="Infra\SQL\create_PayrollCalculus.sql" />
+    <None Include="Infra\SQL\createDb.ps1" />
+    <SqlFiles Include="**\*.sql" />
+    <UpToDateCheckInput Include="@(SqlFiles)" />
     <Compile Include="Infra\DataAccess.fs" />
     <Compile Include="Infra\FormulaParser.fs" />
     <Compile Include="Infra\Interpreter.fs" />
-    <None Include="SQL\create_Hcm.sql" />
-    <None Include="SQL\create_PayrollCalculus.sql" />
-    
-    <None Include="SQL\createDb.ps1" />
     
     <None Include="App.config" />
   </ItemGroup>
@@ -30,18 +31,16 @@
   </ItemGroup>
 
   <ItemGroup>
-    <SqlFiles Include="**\*.sql" />
-    <BuildDbPsScript Include="SQL\createDb.ps1" />
-    <BuildDbSqlScripts Include="SQL\create_Hcm.sql" DbName="Hcm" />
-    <BuildDbSqlScripts Include="SQL\create_PayrollCalculus.sql" DbName="PayrollCalculus" />
-    <UpToDateCheckInput Include="@(SqlFiles)" />
+    <BuildDbPsScript Include="Infra\SQL\createDb.ps1" />
+    <BuildDbSqlScripts Include="Infra\SQL\create_Hcm.sql" DbName="Hcm" />
+    <BuildDbSqlScripts Include="Infra\SQL\create_PayrollCalculus.sql" DbName="PayrollCalculus" />
     <UpToDateCheckInput Include="@(BuildDbPsScript)" />
     <UpToDateCheckInput Include="@(BuildDbSqlScripts)" />
-    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'SQL\%(DbName).mdf')" />
-    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'SQL\%(DbName).ldf')" />
+    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'Infra\SQL\%(DbName).mdf')" />
+    <UpToDateCheckInput Include="@(BuildDbSqlScripts -> 'Infra\SQL\%(DbName).ldf')" />
   </ItemGroup>
 
-  <Target Name="BuildDb" BeforeTargets="BeforeBuild" Inputs="@(BuildDbSqlScripts);@(BuildDbPsScript)" Outputs="SQL\%(BuildDbSqlScripts.DbName).mdf;SQL\%(BuildDbSqlScripts.DbName).ldf">
+  <Target Name="BuildDb" BeforeTargets="BeforeBuild" Inputs="@(BuildDbSqlScripts);@(BuildDbPsScript)" Outputs="Infra\SQL\%(BuildDbSqlScripts.DbName).mdf;Infra\SQL\%(BuildDbSqlScripts.DbName).ldf">
     <Message Text="DB files missing or outdated. Building out database %(BuildDbSqlScripts.DbName) using script %(BuildDbSqlScripts.Identity)" Importance="High" />
     <Exec Command="PowerShell -NoProfile -ExecutionPolicy Bypass -Command &quot;&amp; { @(BuildDbPsScript) -DbName %(BuildDbSqlScripts.DbName) -DbScript %(BuildDbSqlScripts.Identity) }&quot;" />
   </Target>

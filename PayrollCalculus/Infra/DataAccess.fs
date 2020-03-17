@@ -7,7 +7,7 @@ open PayrollCalculus.Domain
 module DataAccess =
 
     module ElemDefinitionRepo =
-        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "SQL">
+        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "Infra\\SQL">
     
         let handleLoadDefinitions (connectionString: string) (_: ElemDefinitionRepo.LoadDefinitionsSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)

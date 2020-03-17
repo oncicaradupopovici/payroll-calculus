@@ -1,11 +1,10 @@
 ﻿namespace PayrollCalculus.Infra
 
-module DataAccess =
-    open System
-    open FSharp.Data
-    open PayrollCalculus.Domain.DomainTypes  
-    open PayrollCalculus.Domain.SideEffects
+open System
+open FSharp.Data
+open PayrollCalculus.Domain
 
+module DataAccess =
 
     module ElemDefinitionRepo =
         type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "SQL">

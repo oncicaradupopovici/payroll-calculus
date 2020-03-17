@@ -1,9 +1,10 @@
 ﻿namespace PayrollCalculus.Infra
 
+open DynamicExpresso
+open PayrollCalculus.Domain
+open PayrollCalculus.Domain.Parser
+
 module FormulaParser =
-    open DynamicExpresso
-    open PayrollCalculus.Domain.DomainTypes
-    open PayrollCalculus.Domain.SideEffects.Parser
 
     let handle ({formula=formula; definitions=definitions}: ParseFormulaSideEffect) : ParseFormulaResult =
     

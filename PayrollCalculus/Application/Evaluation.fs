@@ -2,9 +2,7 @@
 
 open System
 open NBB.Core.Effects.FSharp
-open PayrollCalculus.Domain.DomainTypes
-open PayrollCalculus.Domain.SideEffects
-open PayrollCalculus.Domain.DomainImpl
+open PayrollCalculus.Domain
 
 module SingleCodeEvaluation =
     type Query =
@@ -16,7 +14,7 @@ module SingleCodeEvaluation =
 
            effect {
                let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-               let! result = evaluateElem elemDefinitionCache code ctx
+               let! result = ElemComputingService.evaluateElem elemDefinitionCache code ctx
 
                return result;
            }
@@ -31,7 +29,7 @@ module MultipleCodesEvaluation =
 
            effect {
                let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-               let! result = evaluateElems elemDefinitionCache codes ctx
+               let! result = ElemComputingService.evaluateElems elemDefinitionCache codes ctx
 
                return result;
            }

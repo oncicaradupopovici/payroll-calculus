@@ -1,39 +1,73 @@
 ﻿namespace PayrollCalculus.Domain
 
+open System
 open NBB.Core.Effects.FSharp
-open NBB.Core.Effects.FSharp.Data
-open NBB.Core.FSharp.Data.ReaderState
-open NBB.Core.Effects.FSharp.Data.StateEffect
-open PayrollCalculus.Domain.SideEffects
-open DomainTypes
-open NBB.Core.Effects.FSharp.Data.ReaderEffect
-open NBB.Core.FSharp.Data
-open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
 open NBB.Core.FSharp.Data.Reader
+open NBB.Core.Effects.FSharp.Data.ReaderEffect
+open NBB.Core.Effects.FSharp.Data.ReaderStateEffect
+open NBB.Core.Effects.FSharp.Data.StateEffect
+open NBB.Core.Effects
+open NBB.Core.FSharp.Data
 
-module DomainImpl =
-    
-    // ---------------------------
-    // Types
-    // ---------------------------
+type Elem<'T> = ReaderStateEffect<ComputationCtx, ElemValueCache, Result<'T, string>>
+and ComputationCtx = {
+    PersonId: PersonId
+    YearMonth: YearMonth
+}
+and YearMonth = {
+    Year: int
+    Month: int
+}
+and PersonId = PersonId of Guid
+and ElemValueCache = Map<ElemCode, Result<obj, string>>
 
-    type EvaluateElem = 
-        ElemDefinitionCache                 // Dependency
-         -> ElemCode                        // Input
-         -> ComputationCtx                  // Input
-         -> Effect<Result<obj, string>>     // Output
+type ElemCache = Map<ElemCode, Elem<obj>>
+
+module Elem = 
+    let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) : Elem<obj> =
+        arr 
+            |> Array.toList
+            |> List.sequenceReaderStateEffect
+            |> ReaderStateEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+        
+    let flattenResult (elemResult: Result<Elem<obj>, string>) : Elem<obj> = 
+        elemResult
+            |> Result.sequenceReaderStateEffect 
+            |> ReaderStateEffect.map (Result.join)
+
+module Parser =
+    type ParseFormulaSideEffect = {
+        formula:string;
+        definitions: ElemDefinitionCache;
+    }
+    with interface ISideEffect<ParseFormulaResult>
+    and ParseFormulaResult = {
+        func: obj [] -> obj
+        parameters: string list
+    }
+
+    let parseFormula definitions formula = (Effect.Of {formula=formula; definitions=definitions}) |> Effect.wrap
+
+module ElemDefinitionRepo =
+    type LoadDefinitionsSideEffect () =
+        interface ISideEffect<Map<ElemCode, ElemDefinition>>
+
+    let loadDefinitions () = (Effect.Of  (LoadDefinitionsSideEffect ())) |> Effect.wrap
+
+module ElemValueRepo = 
+    type LoadSideEffect = {
+        definition: DbElemDefinition
+        ctx: ComputationCtx
+    }
+    with interface ISideEffect<Result<obj, string>>
+
+    let load definition ctx = (Effect.Of {definition=definition; ctx=ctx}) |> Effect.wrap
+                    
 
 
-    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
-    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
+module ElemComputingService =
 
     type private ComputeElem  = ElemDefinitionCache -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
-
-
-    // ---------------------------
-    // Implementation
-    // ---------------------------
-
     let rec private computeElem: ComputeElem =
         fun elemDefinitionCache elemCode -> 
             let buildFormulaElem ({formula=formula}: FormulaElemDefinition)  =
@@ -48,7 +82,7 @@ module DomainImpl =
                 stateEffect { 
                     return (ElemValueRepo.load dbElemDefinition) |> Reader.map StateEffect.lift
                 }
-               
+              
             let buildElem elemDefinition = 
                 match elemDefinition.Type with
                     | Db dbElemDefinition           -> buildDbElem dbElemDefinition
@@ -65,7 +99,7 @@ module DomainImpl =
 
             } |> StateEffect.addCaching elemCode     
 
-
+    type EvaluateElem = ElemDefinitionCache -> ElemCode -> ComputationCtx -> Effect<Result<obj, string>>
     let evaluateElem : EvaluateElem = 
         fun elemDefinitionCache elemCode ctx ->
             effect {
@@ -73,7 +107,8 @@ module DomainImpl =
                 let! (elemValue, _) = ReaderStateEffect.run elem ctx Map.empty
                 return elemValue
             }
-        
+       
+    type EvaluateElems = ElemDefinitionCache -> ElemCode list -> ComputationCtx  -> Effect<Result<obj list, string>>
     let evaluateElems : EvaluateElems = 
         fun elemDefinitionCache elemCodes ctx ->
             effect {
@@ -84,6 +119,7 @@ module DomainImpl =
                 return result
             }
 
+    type EvaluateElemsMultipleContexts = ElemDefinitionCache -> ElemCode list -> ComputationCtx list -> Effect<Result<obj list list, string>>
     let evaluateElemsMultipleContexts : EvaluateElemsMultipleContexts =
         fun elemDefinitionCache elemCodes ctxs ->
             effect {
@@ -92,8 +128,6 @@ module DomainImpl =
                 let result = results |> List.sequenceResult
                 return result
             }
-                  
-
 
 
 

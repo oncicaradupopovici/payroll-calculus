@@ -3,23 +3,21 @@ module UnitTests
 open System
 open Xunit
 open PayrollCalculus.Domain
-open PayrollCalculus.Domain.SideEffects
-open DomainTypes   
-open DomainImpl
+
 
 open FsUnit.Xunit
 open NBB.Core.Effects.FSharp
 
 module Handlers =
 
-    open SideEffects.ElemValueRepo
-    open SideEffects.Parser
+    open PayrollCalculus.Domain.Parser
+    open PayrollCalculus.Domain.ElemValueRepo
     open NBB.Core.Effects
     open System.Threading
 
     type DbResult = Result<obj, string>
 
-    type GenericSideEffectHandler(dbHandler : LoadSideEffect -> DbResult, formulaHandler: ParseFormulaSideEffect -> ParseFormulaResult) =
+    type GenericSideEffectHandler(dbHandler : ElemValueRepo.LoadSideEffect -> DbResult, formulaHandler: ParseFormulaSideEffect -> ParseFormulaResult) =
         interface ISideEffectHandler 
         member _.Handle(sideEffect: obj, _ : CancellationToken) =
            match (sideEffect) with
@@ -53,7 +51,7 @@ let ``It shoud evaluate data access element`` () =
 
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
-          let! value = evaluateElem elemDefinitionCache code1 ctx
+          let! value = ElemComputingService.evaluateElem elemDefinitionCache code1 ctx
 
           return value
       }
@@ -87,7 +85,7 @@ let ``It shoud evaluate formula without params`` () =
 
     let eff = effect {
           let! elemDefinitionCache = loadElemDefinitions ()
-          let! value = evaluateElem elemDefinitionCache code1 ctx
+          let! value = ElemComputingService.evaluateElem elemDefinitionCache code1 ctx
 
           return value
     }
@@ -142,7 +140,7 @@ let ``It shoud evaluate formula with params`` () =
     let eff = effect {
         let! elemDefinitionCache = loadElemDefinitions ()
 
-        let! result = evaluateElems elemDefinitionCache [code1; code2] ctx
+        let! result = ElemComputingService.evaluateElems elemDefinitionCache [code1; code2] ctx
 
         return result
     }

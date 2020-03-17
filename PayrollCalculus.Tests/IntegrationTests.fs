@@ -8,7 +8,6 @@ open Microsoft.Extensions.Configuration
 open NBB.Core.Effects.FSharp
 open Xunit
 
-open PayrollCalculus.Domain.SideEffects
 open PayrollCalculus.Infra
 open Interpreter
 open DataAccess

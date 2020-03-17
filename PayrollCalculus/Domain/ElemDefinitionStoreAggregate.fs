@@ -4,17 +4,34 @@ open System
 open NBB.Core.Effects
 open NBB.Core.Effects.FSharp
 
+[<CustomEquality; NoComparison>]
 type ElemDefinitionStore = {
     Id: ElemDefinitionStoreId
     ElemDefinitions: Map<ElemCode, ElemDefinition>
 }
+with
+    override this.Equals(obj) =
+        match obj with
+        | :? ElemDefinitionStore as eds -> this.Id = eds.Id
+        | _ -> false
+    override this.GetHashCode() =
+        hash this.Id
 and ElemDefinitionStoreId = ElemDefinitionStoreId of Guid
 and ElemCode = ElemCode of string
-and ElemDefinition = {
-    Code: ElemCode
-    Type: ElemType
-    DataType: Type
-}
+and 
+    [<CustomEquality; NoComparison>]
+    ElemDefinition = {
+        Code: ElemCode
+        Type: ElemType
+        DataType: Type
+    }
+    with
+    override this.Equals(obj) =
+        match obj with
+        | :? ElemDefinition as ed -> this.Code = ed.Code
+        | _ -> false
+    override this.GetHashCode() =
+        hash this.Code
 and ElemType = 
     | Db of DbElemDefinition
     | Formula of FormulaElemDefinition

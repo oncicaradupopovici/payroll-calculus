@@ -11,13 +11,13 @@ open NBB.Core.Effects.FSharp
 module Handlers =
 
     open PayrollCalculus.Domain.Parser
-    open PayrollCalculus.Domain.ElemValueRepo
+    open PayrollCalculus.Domain.DbElemValue
     open NBB.Core.Effects
     open System.Threading
 
     type DbResult = Result<obj, string>
 
-    type GenericSideEffectHandler(dbHandler : ElemValueRepo.LoadSideEffect -> DbResult, formulaHandler: ParseFormulaSideEffect -> ParseFormulaResult) =
+    type GenericSideEffectHandler(dbHandler : DbElemValue.LoadSideEffect -> DbResult, formulaHandler: ParseFormulaSideEffect -> ParseFormulaResult) =
         interface ISideEffectHandler 
         member _.Handle(sideEffect: obj, _ : CancellationToken) =
            match (sideEffect) with
@@ -49,7 +49,7 @@ let ``It shoud evaluate data access element`` () =
 
     let eff = effect {
           let! elemDefinitionStore = loadElemDefinitions ()
-          let! value = ElemComputingService.evaluateElem elemDefinitionStore code1 ctx
+          let! value = ElemEvaluationService.evaluateElem elemDefinitionStore code1 ctx
 
           return value
       }
@@ -81,7 +81,7 @@ let ``It shoud evaluate formula without params`` () =
 
     let eff = effect {
           let! elemDefinitionStore = loadElemDefinitions ()
-          let! value = ElemComputingService.evaluateElem elemDefinitionStore code1 ctx
+          let! value = ElemEvaluationService.evaluateElem elemDefinitionStore code1 ctx
 
           return value
     }
@@ -136,7 +136,7 @@ let ``It shoud evaluate formula with params`` () =
     let eff = effect {
         let! elemDefinitionStore = loadElemDefinitions ()
 
-        let! result = ElemComputingService.evaluateElems elemDefinitionStore [code1; code2] ctx
+        let! result = ElemEvaluationService.evaluateElems elemDefinitionStore [code1; code2] ctx
 
         return result
     }

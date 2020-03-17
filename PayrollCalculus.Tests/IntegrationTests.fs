@@ -34,7 +34,7 @@ let ``It shoud evaluate formula with params (integration)`` () =
     let interpreter = interpreter [
             FormulaParser.parse                                                       |> toHandlerReg;
             ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString  |> toHandlerReg;
-            ElemValueRepo.loadValue hcmConnectionString                               |> toHandlerReg;
+            DbElemValue.loadValue hcmConnectionString                               |> toHandlerReg;
         ]
 
     let eff = MultipleCodesEvaluation.handler query

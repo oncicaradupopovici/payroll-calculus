@@ -64,7 +64,7 @@ module App =
         let interpreter = interpreter [
                    FormulaParser.parse                                                     |> toHandlerReg;
                    ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString |> toHandlerReg;
-                   ElemValueRepo.loadValue hcmConnectionString                        |> toHandlerReg;
+                   DbElemValue.loadValue hcmConnectionString                        |> toHandlerReg;
                ]
 
         services.AddCors()

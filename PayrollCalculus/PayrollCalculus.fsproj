@@ -8,7 +8,7 @@
 
     <Compile Include="Domain\ElemDefinitionStoreAggregate.fs" />
 
-    <Compile Include="Domain\ElemComputingService.fs" />
+    <Compile Include="Domain\ElemEvaluationService.fs" />
     <Compile Include="Application\Evaluation.fs" />
     <None Include="Infra\SQL\create_Hcm.sql" />
     <None Include="Infra\SQL\create_PayrollCalculus.sql" />

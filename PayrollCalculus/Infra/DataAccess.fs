@@ -28,7 +28,7 @@ module DataAccess =
                 )
             |> ElemDefinitionStore.create
 
-    module ElemValueRepo =
+    module DbElemValue =
         open System.Data.SqlClient
 
         module SqlCommandHelper =
@@ -42,7 +42,7 @@ module DataAccess =
             let execute connection = exec connection <| fun c -> c.ExecuteNonQuery() |> ignore
             let executeScalar connection = exec connection <| fun c -> c.ExecuteScalar()
 
-        let loadValue (connectionString: string) ({Definition=definition; Ctx=ctx} : ElemValueRepo.LoadSideEffect) : Result<obj, string> =
+        let loadValue (connectionString: string) ({Definition=definition; Ctx=ctx} : DbElemValue.LoadSideEffect) : Result<obj, string> =
             let executeCommand  = SqlCommandHelper.executeScalar connectionString   
             let {table=table; column=column} = definition
             let (PersonId personId) = ctx.PersonId

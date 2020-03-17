@@ -9,31 +9,34 @@ open NBB.Core.Effects.FSharp.Data.StateEffect
 open NBB.Core.Effects
 open NBB.Core.FSharp.Data
 
-type Elem<'T> = ReaderStateEffect<ComputationCtx, ElemValueCache, Result<'T, string>>
-and ComputationCtx = {
-    PersonId: PersonId
-    YearMonth: YearMonth
-}
-and YearMonth = {
-    Year: int
-    Month: int
-}
-and PersonId = PersonId of Guid
-and ElemValueCache = Map<ElemCode, Result<obj, string>>
 
-type ElemCache = Map<ElemCode, Elem<obj>>
+[<AutoOpen>]
+module Types = 
+    type Elem<'T> = ReaderStateEffect<ComputationCtx, ElemValueCache, Result<'T, string>>
+    and ComputationCtx = {
+        PersonId: PersonId
+        YearMonth: YearMonth
+    }
+    and YearMonth = {
+        Year: int
+        Month: int
+    }
+    and PersonId = PersonId of Guid
+    and ElemValueCache = Map<ElemCode, Result<obj, string>>
 
-module Elem = 
-    let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) : Elem<obj> =
-        arr 
-            |> Array.toList
-            |> List.sequenceReaderStateEffect
-            |> ReaderStateEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
+    type ElemCache = Map<ElemCode, Elem<obj>>
+
+    module Elem = 
+        let liftFunc (func: obj[] -> obj) (arr: Elem<obj> []) : Elem<obj> =
+            arr 
+                |> Array.toList
+                |> List.sequenceReaderStateEffect
+                |> ReaderStateEffect.map (List.sequenceResult >> Result.map (List.toArray >> func))
         
-    let flattenResult (elemResult: Result<Elem<obj>, string>) : Elem<obj> = 
-        elemResult
-            |> Result.sequenceReaderStateEffect 
-            |> ReaderStateEffect.map (Result.join)
+        let flattenResult (elemResult: Result<Elem<obj>, string>) : Elem<obj> = 
+            elemResult
+                |> Result.sequenceReaderStateEffect 
+                |> ReaderStateEffect.map (Result.join)
 
 module Parser =
     type ParseFormulaSideEffect = {
@@ -48,7 +51,7 @@ module Parser =
 
     let parseFormula definitions formula = (Effect.Of {Formula=formula; ElemDefinitions=definitions}) |> Effect.wrap
 
-module ElemValueRepo = 
+module DbElemValue = 
     type LoadSideEffect = {
         Definition: DbElemDefinition
         Ctx: ComputationCtx
@@ -57,9 +60,7 @@ module ElemValueRepo =
 
     let load definition ctx = (Effect.Of {Definition=definition; Ctx=ctx}) |> Effect.wrap
                     
-
-
-module ElemComputingService =
+module ElemEvaluationService =
 
     type private ComputeElem  = ElemDefinitionStore -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
     let rec private computeElem: ComputeElem =
@@ -74,7 +75,7 @@ module ElemComputingService =
 
             let buildDbElem (dbElemDefinition) =
                 stateEffect { 
-                    return (ElemValueRepo.load dbElemDefinition) |> Reader.map StateEffect.lift
+                    return (DbElemValue.load dbElemDefinition) |> Reader.map StateEffect.lift
                 }
               
             let buildElem elemDefinition = 

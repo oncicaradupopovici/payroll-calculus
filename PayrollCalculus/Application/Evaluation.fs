@@ -14,7 +14,7 @@ module SingleCodeEvaluation =
 
            effect {
                let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
-               let! result = ElemComputingService.evaluateElem elemDefinitionStore code ctx
+               let! result = ElemEvaluationService.evaluateElem elemDefinitionStore code ctx
 
                return result;
            }
@@ -29,7 +29,7 @@ module MultipleCodesEvaluation =
 
            effect {
                let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
-               let! result = ElemComputingService.evaluateElems elemDefinitionStore codes ctx
+               let! result = ElemEvaluationService.evaluateElems elemDefinitionStore codes ctx
 
                return result;
            }

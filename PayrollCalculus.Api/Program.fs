@@ -14,6 +14,8 @@ open NBB.Core.Effects
 open PayrollCalculus.Infra
 open DataAccess
 open Interpreter
+open NBB.Messaging.Effects
+open NBB.Messaging.Nats
 
 // ---------------------------------
 // Web app
@@ -26,7 +28,7 @@ module App =
             subRoute "/api"
                 (choose [
                     Handlers.Evaluation.handler
-                    //ContractsAlternative.handler
+                    Handlers.ElemDefinitions.handler
                 ])
             setStatusCode 401 >=> text "Not Found" ]
 
@@ -60,17 +62,27 @@ module App =
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
-        let interpreter = interpreter [
-                   FormulaParser.handle                                        |> toHandlerReg;
-                   ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-                   ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
-               ]
+        services.AddSingleton<IInterpreter>(fun sp ->
+            let publisher = sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>()
+            //let publishHandler =  new SideEffectHandlerWrapper<Unit>(PublishMessage.Handler(publisher))
+            let publishHandler = fun (msg: PublishMessage.SideEffect) -> publisher.PublishAsync(msg.Message) |> Async.AwaitTask |> Async.RunSynchronously; Unit()
 
+            let interpreter = interpreter [
+                FormulaParser.handle                                        |> toHandlerReg;
+                ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
+                ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
+                //(typeof<PublishMessage.SideEffect>,  publishHandler :> ISideEffectHandler)  
+                publishHandler                                              |> toHandlerReg
+            ]
+
+            interpreter :> IInterpreter
+        ) |> ignore
+
+        services.AddNatsMessaging() |> ignore
         services.AddCors()
             .AddGiraffe() 
             .AddSingleton<IJsonSerializer>(
                 NewtonsoftJsonSerializer(NewtonsoftJsonSerializer.DefaultSettings))
-            .AddSingleton<IInterpreter>(interpreter)
             |> ignore
 
 

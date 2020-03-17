@@ -1,5 +1,9 @@
 ﻿namespace PayrollCalclulus.Api
 
+open NBB.Core.Abstractions
+open NBB.Application.DataContracts
+open NBB.Correlation
+
 module HandlerUtils =
     open Giraffe
     open NBB.Core.Effects
@@ -25,3 +29,12 @@ module HandlerUtils =
     let jsonResult = function
         | Ok value -> json value
         | Error err -> setError err
+
+    let commandResult (command : IMetadataProvider<CommandMetadata>) : HttpHandler =
+        fun (next : HttpFunc) (ctx : HttpContext) ->
+            let result = {| 
+                //CommandId = command.Metadata.CommandId 
+                CorrelationId = CorrelationManager.GetCorrelationId() 
+            |}
+
+            Successful.OK result next ctx

@@ -4,7 +4,7 @@ open System
 open NBB.Core.Effects.FSharp
 open PayrollCalculus.Domain
 
-module SingleCodeEvaluation =
+module EvaluateSingleCode =
     type Query =
         {ElemCode:string; PersonId: Guid; Year: int; Month: int}
 
@@ -19,7 +19,7 @@ module SingleCodeEvaluation =
                return result;
            }
 
-module MultipleCodesEvaluation =
+module EvaluateMultipleCodes =
     type Query =
         {ElemCodes:string list; PersonId: Guid; Year: int; Month: int}
 

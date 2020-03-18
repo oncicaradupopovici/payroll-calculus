@@ -1,40 +1,34 @@
 ﻿namespace PayrollCalculus.Infra
 
+open System
+open FSharp.Data
+open PayrollCalculus.Domain
+
 module DataAccess =
-    open System
-    open FSharp.Data
-    open PayrollCalculus.Domain.DomainTypes  
-    open PayrollCalculus.Domain.SideEffects
 
-
-    module ElemDefinitionRepo =
-        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "SQL">
+    module ElemDefinitionStoreRepo =
+        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "Infra\\SQL">
     
-        let handleLoadDefinitions (connectionString: string) (_: ElemDefinitionRepo.LoadDefinitionsSideEffect)  =
+        let loadCurrentElemDefinitionStore (connectionString: string) (_: ElemDefinitionStoreRepo.LoadCurrentDefinitionStoreSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)
 
             let results = cmd.Execute ()
-            let dictionary =
-                results 
-                |> Seq.map (
-                    fun item  -> 
-                        let elemCode = ElemCode(item.Code)
-                        let elemDefinition = {
-                                Code = elemCode;
-                                Type = 
-                                    match item.Type with
-                                    | Some "Formula" -> Formula {formula = item.Formula.Value; deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
-                                    | Some "Db" -> Db { table = item.Table.Value; column = item.Column.Value}
-                                    | _ -> failwith "DB configuration errror"
-                                DataType = Type.GetType(item.DataType)
-                            } 
-                        (elemCode, elemDefinition)
-                    )
-                |> Map.ofSeq
+            in results |> Seq.map (
+                fun item  -> 
+                    let elemCode = ElemCode(item.Code)
+                    in {
+                        Code = elemCode;
+                        Type = 
+                            match item.Type with
+                            | Some "Formula" -> Formula {formula = item.Formula.Value; deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
+                            | Some "Db" -> Db { table = item.Table.Value; column = item.Column.Value}
+                            | _ -> failwith "DB configuration errror"
+                        DataType = Type.GetType(item.DataType)
+                    }
+                )
+            |> ElemDefinitionStore.create
 
-            dictionary 
-
-    module ElemValueRepo =
+    module DbElemValue =
         open System.Data.SqlClient
 
         module SqlCommandHelper =
@@ -48,7 +42,7 @@ module DataAccess =
             let execute connection = exec connection <| fun c -> c.ExecuteNonQuery() |> ignore
             let executeScalar connection = exec connection <| fun c -> c.ExecuteScalar()
 
-        let handleLoadValue (connectionString: string) ({definition=definition; ctx=ctx} : ElemValueRepo.LoadSideEffect) : Result<obj, string> =
+        let loadValue (connectionString: string) ({Definition=definition; Ctx=ctx} : DbElemValue.LoadSideEffect) : Result<obj, string> =
             let executeCommand  = SqlCommandHelper.executeScalar connectionString   
             let {table=table; column=column} = definition
             let (PersonId personId) = ctx.PersonId

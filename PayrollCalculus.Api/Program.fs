@@ -7,6 +7,7 @@ open Giraffe.Serialization
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
@@ -43,13 +44,13 @@ module App =
     // ---------------------------------
 
     let configureCors (builder : CorsPolicyBuilder) =
-        builder.WithOrigins("http://localhost:8080")
+        builder.WithOrigins("http://localhost:5000")
                .AllowAnyMethod()
                .AllowAnyHeader()
                |> ignore
 
     let configureApp (app : IApplicationBuilder) =
-        let env = app.ApplicationServices.GetService<IHostingEnvironment>()
+        let env = app.ApplicationServices.GetService<IWebHostEnvironment>()
         (match env.IsDevelopment() with
         | true  -> app.UseDeveloperExceptionPage()
         | false -> app.UseGiraffeErrorHandler errorHandler)
@@ -60,11 +61,11 @@ module App =
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
-        let interpreter = interpreter [
-                   FormulaParser.handle                                        |> toHandlerReg;
-                   ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-                   ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
-               ]
+        let interpreter = createInterpreter [
+            FormulaParser.parse                                                         |> toHandlerReg;
+            ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString    |> toHandlerReg;
+            DbElemValue.loadValue hcmConnectionString                                 |> toHandlerReg;
+        ]
 
         services.AddCors()
             .AddGiraffe() 

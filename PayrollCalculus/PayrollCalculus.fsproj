@@ -7,9 +7,11 @@
   <ItemGroup>
 
     <Compile Include="Domain\ElemDefinitionStoreAggregate.fs" />
-
     <Compile Include="Domain\ElemEvaluationService.fs" />
+    <Compile Include="PublishedLanguage\Events.fs" />
+    <Compile Include="PublishedLanguage\Commands.fs" />
     <Compile Include="Application\Evaluation.fs" />
+    <Compile Include="Application\ElemDefinition.fs" />
     <None Include="Infra\SQL\create_Hcm.sql" />
     <None Include="Infra\SQL\create_PayrollCalculus.sql" />
     <None Include="Infra\SQL\createDb.ps1" />
@@ -18,7 +20,8 @@
     <Compile Include="Infra\DataAccess.fs" />
     <Compile Include="Infra\FormulaParser.fs" />
     <Compile Include="Infra\Interpreter.fs" />
-    
+    <Compile Include="Infra\CommandHandler.fs" />
+   
     <None Include="App.config" />
   </ItemGroup>
 
@@ -26,7 +29,9 @@
     <PackageReference Include="DynamicExpresso.Core" Version="2.3.1" />
     <PackageReference Include="FSharp.Configuration" Version="2.0.0-alpha2" />
     <PackageReference Include="FSharp.Data.SqlClient" Version="2.0.6" />
+    <PackageReference Include="NBB.Application.DataContracts" Version="4.1.18" />
     <PackageReference Include="NBB.Core.Effects.FSharp" Version="4.1.18" />
+    <PackageReference Include="NBB.Messaging.Effects" Version="4.1.18" />
     <PackageReference Include="NReco.LambdaParser" Version="1.0.11" />
   </ItemGroup>
 

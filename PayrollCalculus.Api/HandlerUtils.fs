@@ -4,6 +4,13 @@ open NBB.Core.Abstractions
 open NBB.Application.DataContracts
 open NBB.Correlation
 
+// TODO: Find a place for MesageBus wrapper
+module MessageBus =
+    open NBB.Core.Effects.FSharp
+    open NBB.Messaging.Effects
+
+    let publish (obj: 'TMessage) =  MessageBus.Publish (obj :> obj) |> Effect.wrap |> Effect.ignore
+
 module HandlerUtils =
     open Giraffe
     open NBB.Core.Effects
@@ -13,7 +20,6 @@ module HandlerUtils =
 
     type Effect<'a> = NBB.Core.Effects.FSharp.Effect<'a>
     module Effect = NBB.Core.Effects.FSharp.Effect
-    
 
     let setError errorText = 
         (clearResponse >=> setStatusCode 500 >=> text errorText)
@@ -33,8 +39,16 @@ module HandlerUtils =
     let commandResult (command : IMetadataProvider<CommandMetadata>) : HttpHandler =
         fun (next : HttpFunc) (ctx : HttpContext) ->
             let result = {| 
-                //CommandId = command.Metadata.CommandId 
+                CommandId = command.Metadata.CommandId 
                 CorrelationId = CorrelationManager.GetCorrelationId() 
             |}
 
             Successful.OK result next ctx
+
+    let interpretCommand handler command = 
+        let resultHandler _ = commandResult command
+        command |> handler |> interpret resultHandler
+
+    let publishCommand : (IMetadataProvider<CommandMetadata> -> HttpHandler) = 
+        MessageBus.publish |> interpretCommand 
+        

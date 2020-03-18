@@ -11,12 +11,14 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
-open NBB.Core.Effects
 open PayrollCalculus.Infra
 open DataAccess
 open Interpreter
 open NBB.Messaging.Effects
 open NBB.Messaging.Nats
+open NBB.Core.Effects
+open NBB.Correlation.AspNet
+
 
 // ---------------------------------
 // Web app
@@ -31,7 +33,7 @@ module App =
                     Handlers.Evaluation.handler
                     Handlers.ElemDefinitions.handler
                 ])
-            setStatusCode 401 >=> text "Not Found" ]
+            setStatusCode 404 >=> text "Not Found" ]
 
     // ---------------------------------
     // Error handler
@@ -57,6 +59,7 @@ module App =
         | true  -> app.UseDeveloperExceptionPage()
         | false -> app.UseGiraffeErrorHandler errorHandler)
             .UseCors(configureCors)
+            .UseCorrelation()
             .UseGiraffe(webApp)
 
     let configureServices (context: WebHostBuilderContext) (services : IServiceCollection) =
@@ -64,16 +67,14 @@ module App =
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
         services.AddSingleton<IInterpreter>(fun sp ->
-            let publisher = sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>()
-            //let publishHandler =  new SideEffectHandlerWrapper<Unit>(PublishMessage.Handler(publisher))
-            let publishHandler = fun (msg: PublishMessage.SideEffect) -> publisher.PublishAsync(msg.Message) |> Async.AwaitTask |> Async.RunSynchronously; Unit()
+            let publishHandler = PublishMessage.Handler(sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>())
+            let publish = publishHandler.Handle >> Async.AwaitTask >> Async.RunSynchronously >> (fun _unit -> Unit())
 
             let interpreter = createInterpreter [
                 FormulaParser.parse                                                         |> toHandlerReg;
                 ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString    |> toHandlerReg;
                 DbElemValue.loadValue hcmConnectionString                                   |> toHandlerReg;
-                //(typeof<PublishMessage.SideEffect>,  publishHandler :> ISideEffectHandler)  
-                publishHandler                                                              |> toHandlerReg
+                publish                                                                     |> toHandlerReg
             ]
 
             interpreter :> IInterpreter

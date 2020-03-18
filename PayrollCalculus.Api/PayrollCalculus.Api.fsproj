@@ -16,6 +16,7 @@
     <PackageReference Include="Giraffe" Version="4.0.1" />
     <PackageReference Include="NBB.Correlation" Version="4.1.18" />
     <PackageReference Include="NBB.Messaging.Nats" Version="4.1.18" />
+    <PackageReference Include="NBB.Correlation.AspNet" Version="4.1.18" />
   </ItemGroup>
 
   <ItemGroup>

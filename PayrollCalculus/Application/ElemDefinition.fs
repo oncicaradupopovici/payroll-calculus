@@ -1,19 +1,21 @@
 ﻿namespace PayrollCalculus.Application.ElemDefinition
 
 open NBB.Core.Effects.FSharp
-open PayrollCalculus.PublishedLanguage.Commands
-open PayrollCalculus.PublishedLanguage.Events
+open PayrollCalculus.PublishedLanguage
 open NBB.Messaging.Effects
 open NBB.Application.DataContracts
 
-module AddElemDefinition =
-    let private publish (obj: 'TMessage) =  MessageBus.Publish (obj :> obj) |> Effect.wrap |> Effect.map(fun _ -> ())
+// TODO: Find a place for MesageBus wrapper
+module MessageBus =
+    let publish (obj: 'TMessage) =  MessageBus.Publish (obj :> obj) |> Effect.wrap |> Effect.ignore
 
-    let handler ({ElemCode=elemCode}: AddElemDefinition) =
+module AddElemDefinition =
+    let handler (command: AddElemDefinition) =
         effect {
-            //do! elemDefinitionCache = ElemDefinitionRepo.saveDefinition ()
-            let event: ElemDefinitionAdded = {ElemCode=elemCode; Metadata = EventMetadata.Default()}
-            do! publish event
+            //do! ElemDefinitionRepo.saveDefinition {ElemCode = command.ElemCode |> ElemCode}
+
+            let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}
+            do! MessageBus.publish event
 
             return ()
         }

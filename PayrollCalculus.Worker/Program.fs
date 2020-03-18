@@ -3,31 +3,33 @@
 open System
 open System.IO
 open System.Threading
-open System.Linq
-open Microsoft.Extensions.Configuration
-open Microsoft.Extensions.DependencyInjection
+open System.Reflection
+open System.Threading.Tasks
 open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
-open Serilog
-open Serilog.Events
-open NBB.Correlation.Serilog
-open NBB.Messaging.Host
-open NBB.Messaging.Nats
-open NBB.Messaging.Host.MessagingPipeline;
-open PayrollCalculus.PublishedLanguage
+open Microsoft.Extensions.DependencyInjection
+open Microsoft.Extensions.Configuration
 open FSharp.Control.Tasks.V2.ContextInsensitive
-open System.Reflection
-open PayrollCalculus.Infra.CommandHandler
-open PayrollCalculus.Infra.Interpreter
-open PayrollCalculus
 open NBB.Core.Pipeline
 open NBB.Messaging.DataContracts
 open NBB.Messaging.Effects
-open System.Threading.Tasks
+open NBB.Messaging.Host
+open NBB.Messaging.Nats
+open NBB.Messaging.Host.MessagingPipeline;
+open NBB.Core.Effects
 open NBB.Core.Abstractions
 open NBB.Core.Effects.FSharp
 open NBB.Core.Effects
 open NBB.Resiliency
+open PayrollCalculus
+open PayrollCalculus.PublishedLanguage
+open PayrollCalculus.Infra
+open DataAccess
+open Interpreter
+open CommandHandler
+open PayrollCalculus.Infra.CommandHandler
+open PayrollCalculus.Infra.Interpreter
+
 
 
 type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler) = 
@@ -71,7 +73,7 @@ let main argv =
                 let publishHandler = fun (msg: PublishMessage.SideEffect) -> publisher.PublishAsync(msg.Message) |> Async.AwaitTask |> Async.RunSynchronously; Unit()
 
 
-                let interpreter = interpreter [
+                let interpreter = createInterpreter [
                     //(typeof<PublishMessage.SideEffect>,  publishHandler :> ISideEffectHandler)  
                     publishHandler |> toHandlerReg
                 ]
@@ -125,10 +127,6 @@ let main argv =
             .UseConsoleLifetime()
             .Build()
 
-    Log.Information "Starting NBB.Worker"
-
     host.RunAsync()  |> Async.AwaitTask |> Async.RunSynchronously
-
-
     0
 

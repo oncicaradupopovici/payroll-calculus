@@ -8,7 +8,6 @@ open Microsoft.Extensions.Configuration
 open NBB.Core.Effects.FSharp
 open Xunit
 
-open PayrollCalculus.Domain.SideEffects
 open PayrollCalculus.Infra
 open Interpreter
 open DataAccess
@@ -29,16 +28,16 @@ let hcmConnectionString = configuration.GetConnectionString "Hcm"
 let ``It shoud evaluate formula with params (integration)`` () =
 
     // Arrange
-    let query : MultipleCodesEvaluation.Query = 
+    let query : EvaluateMultipleCodes.Query = 
         { ElemCodes = ["SalariuNet"; "Impozit"]; PersonId = Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d"); Year=2009; Month=1;}
 
-    let interpreter = interpreter [
-            FormulaParser.handle                                        |> toHandlerReg;
-            ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-            ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
+    let interpreter = createInterpreter [
+            FormulaParser.parse                                                       |> toHandlerReg;
+            ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString  |> toHandlerReg;
+            DbElemValue.loadValue hcmConnectionString                               |> toHandlerReg;
         ]
 
-    let eff = MultipleCodesEvaluation.handler query
+    let eff = EvaluateMultipleCodes.handler query
 
     // Act
     let result = eff |> Effect.interpret interpreter |> Async.RunSynchronously

@@ -7,6 +7,7 @@ open Giraffe.Serialization
 open Microsoft.AspNetCore.Builder
 open Microsoft.AspNetCore.Cors.Infrastructure
 open Microsoft.AspNetCore.Hosting
+open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
@@ -45,13 +46,13 @@ module App =
     // ---------------------------------
 
     let configureCors (builder : CorsPolicyBuilder) =
-        builder.WithOrigins("http://localhost:8080")
+        builder.WithOrigins("http://localhost:5000")
                .AllowAnyMethod()
                .AllowAnyHeader()
                |> ignore
 
     let configureApp (app : IApplicationBuilder) =
-        let env = app.ApplicationServices.GetService<IHostingEnvironment>()
+        let env = app.ApplicationServices.GetService<IWebHostEnvironment>()
         (match env.IsDevelopment() with
         | true  -> app.UseDeveloperExceptionPage()
         | false -> app.UseGiraffeErrorHandler errorHandler)
@@ -67,12 +68,12 @@ module App =
             //let publishHandler =  new SideEffectHandlerWrapper<Unit>(PublishMessage.Handler(publisher))
             let publishHandler = fun (msg: PublishMessage.SideEffect) -> publisher.PublishAsync(msg.Message) |> Async.AwaitTask |> Async.RunSynchronously; Unit()
 
-            let interpreter = interpreter [
-                FormulaParser.handle                                        |> toHandlerReg;
-                ElemDefinitionRepo.handleLoadDefinitions payrollConnString  |> toHandlerReg;
-                ElemValueRepo.handleLoadValue hcmConnectionString           |> toHandlerReg;
+            let interpreter = createInterpreter [
+                FormulaParser.parse                                                         |> toHandlerReg;
+                ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString    |> toHandlerReg;
+                DbElemValue.loadValue hcmConnectionString                                   |> toHandlerReg;
                 //(typeof<PublishMessage.SideEffect>,  publishHandler :> ISideEffectHandler)  
-                publishHandler                                              |> toHandlerReg
+                publishHandler                                                              |> toHandlerReg
             ]
 
             interpreter :> IInterpreter

@@ -2,11 +2,9 @@
 
 open System
 open NBB.Core.Effects.FSharp
-open PayrollCalculus.Domain.DomainTypes
-open PayrollCalculus.Domain.SideEffects
-open PayrollCalculus.Domain.DomainImpl
+open PayrollCalculus.Domain
 
-module SingleCodeEvaluation =
+module EvaluateSingleCode =
     type Query =
         {ElemCode:string; PersonId: Guid; Year: int; Month: int}
 
@@ -15,13 +13,13 @@ module SingleCodeEvaluation =
            let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
            effect {
-               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-               let! result = evaluateElem elemDefinitionCache code ctx
+               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
+               let! result = ElemEvaluationService.evaluateElem elemDefinitionStore code ctx
 
                return result;
            }
 
-module MultipleCodesEvaluation =
+module EvaluateMultipleCodes =
     type Query =
         {ElemCodes:string list; PersonId: Guid; Year: int; Month: int}
 
@@ -30,8 +28,8 @@ module MultipleCodesEvaluation =
            let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
            effect {
-               let! elemDefinitionCache = ElemDefinitionRepo.loadDefinitions ()
-               let! result = evaluateElems elemDefinitionCache codes ctx
+               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
+               let! result = ElemEvaluationService.evaluateElems elemDefinitionStore codes ctx
 
                return result;
            }

@@ -19,17 +19,12 @@ open NBB.Messaging.Host.MessagingPipeline;
 open NBB.Core.Effects
 open NBB.Core.Abstractions
 open NBB.Core.Effects.FSharp
-open NBB.Core.Effects
 open NBB.Resiliency
 open PayrollCalculus
 open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
-open DataAccess
 open Interpreter
 open CommandHandler
-open PayrollCalculus.Infra.CommandHandler
-open PayrollCalculus.Infra.Interpreter
-
 
 
 type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler) = 
@@ -62,8 +57,8 @@ let main argv =
     // Services configuration
     let serviceConfig (context : HostBuilderContext) (services : IServiceCollection) =
         services.AddScoped<CommandHandler>(Func<IServiceProvider, CommandHandler>(fun _sp -> 
-             commandHandler [
-                        Application.ElemDefinition.AddElemDefinition.handle |> toCommandHandlerReg
+             createCommandHandler [
+                        Application.ElemDefinition.AddElemDefinition.handler |> toCommandHandlerReg
              ]
         )) |> ignore
 

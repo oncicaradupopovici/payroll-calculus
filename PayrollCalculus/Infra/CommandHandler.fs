@@ -16,7 +16,7 @@ module CommandHandler =
                 | _ -> failwith "Wrong type"
 
 
-    let commandHandler(handlerRegistrations: seq<HandlerRegistration>) : CommandHandler =
+    let createCommandHandler(handlerRegistrations: seq<HandlerRegistration>) : CommandHandler =
         let handlersMap = handlerRegistrations |> Seq.map (fun (key, value) -> (key.FullName, value)) |> Map.ofSeq
 
         fun (sideEffect) ->

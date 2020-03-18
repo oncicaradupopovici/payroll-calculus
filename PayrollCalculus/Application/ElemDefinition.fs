@@ -9,7 +9,7 @@ open NBB.Application.DataContracts
 module AddElemDefinition =
     let private publish (obj: 'TMessage) =  MessageBus.Publish (obj :> obj) |> Effect.wrap |> Effect.map(fun _ -> ())
 
-    let handle ({elemCode=elemCode}: AddElemDefinition) =
+    let handler ({ElemCode=elemCode}: AddElemDefinition) =
         effect {
             //do! elemDefinitionCache = ElemDefinitionRepo.saveDefinition ()
             let event: ElemDefinitionAdded = {ElemCode=elemCode; Metadata = EventMetadata.Default()}

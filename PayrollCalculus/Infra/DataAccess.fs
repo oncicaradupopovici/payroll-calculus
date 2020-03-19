@@ -9,7 +9,7 @@ module DataAccess =
     module ElemDefinitionStoreRepo =
         type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "Infra\\SQL">
     
-        let loadCurrentElemDefinitionStore (connectionString: string) (_: ElemDefinitionStoreRepo.LoadCurrentDefinitionStoreSideEffect)  =
+        let loadCurrent (connectionString: string) (_: ElemDefinitionStoreRepo.LoadCurrentElemDefinitionStoreSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)
 
             let results = cmd.Execute ()
@@ -21,12 +21,14 @@ module DataAccess =
                         Type = 
                             match item.Type with
                             | Some "Formula" -> Formula {formula = item.Formula.Value; deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
-                            | Some "Db" -> Db { table = item.Table.Value; column = item.Column.Value}
+                            | Some "Db" -> Db { Table = item.Table.Value; Column = item.Column.Value}
                             | _ -> failwith "DB configuration errror"
                         DataType = Type.GetType(item.DataType)
                     }
                 )
             |> ElemDefinitionStore.create
+
+        let save (_connectionString: string) (_sideEffect: ElemDefinitionStoreRepo.SaveElemDefinitionStoreSideEffect) = ()
 
     module DbElemValue =
         open System.Data.SqlClient
@@ -44,7 +46,7 @@ module DataAccess =
 
         let loadValue (connectionString: string) ({Definition=definition; Ctx=ctx} : DbElemValue.LoadSideEffect) : Result<obj, string> =
             let executeCommand  = SqlCommandHelper.executeScalar connectionString   
-            let {table=table; column=column} = definition
+            let {Table=table; Column=column} = definition
             let (PersonId personId) = ctx.PersonId
             let result = 
                 executeCommand

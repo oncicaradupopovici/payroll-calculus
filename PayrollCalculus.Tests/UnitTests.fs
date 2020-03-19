@@ -38,7 +38,7 @@ let ``It shoud evaluate data access element`` () =
     // Arrange
     let code1 = ElemCode "code1"
     let loadElemDefinitions () =
-        seq { yield {Code = code1; Type = Db {table="aa"; column ="bb"}; DataType= typeof<int> }} 
+        seq { yield {Code = code1; Type = Db {Table="aa"; Column ="bb"}; DataType= typeof<int> }} 
         |> ElemDefinitionStore.create
         |> Effect.pure'
 
@@ -106,7 +106,7 @@ let ``It shoud evaluate formula with params`` () =
     let loadElemDefinitions () =
         seq { 
             yield {Code = code1; Type = Formula {formula="1m + code2 + code3"; deps =[]} ;DataType= typeof<decimal>}
-            yield {Code = code2; Type = Db {table="aa"; column ="bb"}; DataType= typeof<decimal>}
+            yield {Code = code2; Type = Db {Table="aa"; Column ="bb"}; DataType= typeof<decimal>}
             yield {Code = code3; Type = Formula {formula="1m + code2"; deps =[]; }; DataType= typeof<decimal> }
         } 
         |> ElemDefinitionStore.create

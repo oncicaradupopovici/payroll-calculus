@@ -33,7 +33,7 @@ let ``It shoud evaluate formula with params (integration)`` () =
 
     let interpreter = createInterpreter [
             FormulaParser.parse                                                       |> toHandlerReg;
-            ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore payrollConnString  |> toHandlerReg;
+            ElemDefinitionStoreRepo.loadCurrent payrollConnString  |> toHandlerReg;
             DbElemValue.loadValue hcmConnectionString                               |> toHandlerReg;
         ]
 

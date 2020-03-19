@@ -13,7 +13,7 @@ module EvaluateSingleCode =
            let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
            effect {
-               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
+               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrent
                let! result = ElemEvaluationService.evaluateElem elemDefinitionStore code ctx
 
                return result;
@@ -28,7 +28,7 @@ module EvaluateMultipleCodes =
            let ctx = {PersonId = PersonId(query.PersonId); YearMonth = {Year = query.Year; Month = query.Month}}
 
            effect {
-               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrentElemDefinitionStore ()
+               let! elemDefinitionStore = ElemDefinitionStoreRepo.loadCurrent
                let! result = ElemEvaluationService.evaluateElems elemDefinitionStore codes ctx
 
                return result;

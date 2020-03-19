@@ -1,22 +1,22 @@
-﻿/****** Object:  Table [dbo].[DbElemDefinition]    Script Date: 2/26/2020 2:12:19 PM ******/
+﻿/****** Object:  Table [dbo].[DbElemDefinition]    Script Date: 3/19/2020 11:11:13 AM ******/
 SET ANSI_NULLS ON
-GO
-SET QUOTED_IDENTIFIER ON 
-GO
+GO 
+SET QUOTED_IDENTIFIER ON  
+GO 
 CREATE TABLE [dbo].[DbElemDefinition](
 	[DbElemDefinitionId] [int] IDENTITY(1,1) NOT NULL,
-	[Table] [nchar](10) NOT NULL,
+	[Table] [nchar](10) NOT NULL,  
 	[Column] [nchar](10) NOT NULL,
 	[ElemDefinitionId] [int] NOT NULL,
- CONSTRAINT [PK_DbElemDefinition] PRIMARY KEY CLUSTERED 
+ CONSTRAINT [PK_DbElemDefinition] PRIMARY KEY CLUSTERED  
 (
 	[DbElemDefinitionId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[ElemDefinition]    Script Date: 2/26/2020 2:12:19 PM ******/
+/****** Object:  Table [dbo].[ElemDefinition]    Script Date: 3/19/2020 11:11:13 AM ******/
 SET ANSI_NULLS ON
-GO
+GO 
 SET QUOTED_IDENTIFIER ON
 GO
 CREATE TABLE [dbo].[ElemDefinition](
@@ -29,22 +29,22 @@ CREATE TABLE [dbo].[ElemDefinition](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[FormulaDependency]    Script Date: 2/26/2020 2:12:19 PM ******/
+/****** Object:  Table [dbo].[ElemDependency]    Script Date: 3/19/2020 11:11:13 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
-CREATE TABLE [dbo].[FormulaDependency](
-	[FormulaDependencyId] [int] IDENTITY(1,1) NOT NULL,
-	[FormulaId] [int] NOT NULL,
+CREATE TABLE [dbo].[ElemDependency](
+	[ElemDependencyId] [int] IDENTITY(1,1) NOT NULL,
 	[ElemDefinitionId] [int] NOT NULL,
- CONSTRAINT [PK_FormulaDependency] PRIMARY KEY CLUSTERED 
+	[DependencyElemDefinitionId] [int] NOT NULL,
+ CONSTRAINT [PK_ElemDependency] PRIMARY KEY CLUSTERED 
 (
-	[FormulaDependencyId] ASC
+	[ElemDependencyId] ASC
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  Table [dbo].[FromulaElemDefinition]    Script Date: 2/26/2020 2:12:19 PM ******/
+/****** Object:  Table [dbo].[FromulaElemDefinition]    Script Date: 3/19/2020 11:11:13 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
@@ -59,11 +59,12 @@ CREATE TABLE [dbo].[FromulaElemDefinition](
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
 ) ON [PRIMARY]
 GO
-/****** Object:  View [dbo].[VW_ElemDefinitions]    Script Date: 2/26/2020 2:12:19 PM ******/
+/****** Object:  View [dbo].[VW_ElemDefinitions]    Script Date: 3/19/2020 11:11:13 AM ******/
 SET ANSI_NULLS ON
 GO
 SET QUOTED_IDENTIFIER ON
 GO
+
 
 CREATE view [dbo].[VW_ElemDefinitions] AS
 	select 
@@ -77,9 +78,9 @@ CREATE view [dbo].[VW_ElemDefinitions] AS
 		fed.Formula,
 		STUFF((
 			select ';'+ ed1.Code 
-				from dbo.FormulaDependency fd
-				inner join dbo.ElemDefinition ed1 on fd.ElemDefinitionId = ed1.ElemDefinitionId
-				where fd.FormulaId = fed.FormulaId
+				from dbo.ElemDependency dep
+				inner join dbo.ElemDefinition ed1 on dep.DependencyElemDefinitionId = ed1.ElemDefinitionId
+				where dep.ElemDefinitionId = ed.ElemDefinitionId
 			FOR XML PATH('')
 			),1,1,'') as FormulaDeps
 	from dbo.ElemDefinition ed
@@ -91,15 +92,15 @@ REFERENCES [dbo].[ElemDefinition] ([ElemDefinitionId])
 GO
 ALTER TABLE [dbo].[DbElemDefinition] CHECK CONSTRAINT [FK_DbElemDefinition_ElemDefinition]
 GO
-ALTER TABLE [dbo].[FormulaDependency]  WITH CHECK ADD  CONSTRAINT [FK_FormulaDependency_ElemDefinition] FOREIGN KEY([ElemDefinitionId])
+ALTER TABLE [dbo].[ElemDependency]  WITH CHECK ADD  CONSTRAINT [FK_ElemDependency_DependencyElemDefinition] FOREIGN KEY([DependencyElemDefinitionId])
 REFERENCES [dbo].[ElemDefinition] ([ElemDefinitionId])
 GO
-ALTER TABLE [dbo].[FormulaDependency] CHECK CONSTRAINT [FK_FormulaDependency_ElemDefinition]
+ALTER TABLE [dbo].[ElemDependency] CHECK CONSTRAINT [FK_ElemDependency_DependencyElemDefinition]
 GO
-ALTER TABLE [dbo].[FormulaDependency]  WITH CHECK ADD  CONSTRAINT [FK_FormulaDependency_FromulaElemDefinition] FOREIGN KEY([FormulaId])
-REFERENCES [dbo].[FromulaElemDefinition] ([FormulaId])
+ALTER TABLE [dbo].[ElemDependency]  WITH CHECK ADD  CONSTRAINT [FK_ElemDependency_ElemDefinition] FOREIGN KEY([ElemDefinitionId])
+REFERENCES [dbo].[ElemDefinition] ([ElemDefinitionId])
 GO
-ALTER TABLE [dbo].[FormulaDependency] CHECK CONSTRAINT [FK_FormulaDependency_FromulaElemDefinition]
+ALTER TABLE [dbo].[ElemDependency] CHECK CONSTRAINT [FK_ElemDependency_ElemDefinition]
 GO
 ALTER TABLE [dbo].[FromulaElemDefinition]  WITH CHECK ADD  CONSTRAINT [FK_FromulaElemDefinition_ElemDefinition] FOREIGN KEY([ElemDefinitionId])
 REFERENCES [dbo].[ElemDefinition] ([ElemDefinitionId])

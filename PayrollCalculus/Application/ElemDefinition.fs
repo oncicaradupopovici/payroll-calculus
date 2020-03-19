@@ -14,8 +14,8 @@ module MessageBus =
     
 //TODO implement a mediator like solution for events
 module Mediator = 
-    let dispatchEvent<'e> (_event:'e) = Effect.pure' ()
-    let dispatchEvents<'e> (events: 'e list) = List.traverseEffect dispatchEvent events |> Effect.ignore
+    let dispatchEvent (_event:'e) = Effect.pure' ()
+    let dispatchEvents (events: 'e list) = List.traverseEffect dispatchEvent events |> Effect.ignore
 
 module AddDbElemDefinition =
     let handler (command: AddDbElemDefinition) =

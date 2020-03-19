@@ -6,6 +6,7 @@ open NBB.Messaging.Effects
 open NBB.Application.DataContracts
 open PayrollCalculus.Domain
 open NBB.Core.Evented.FSharp
+open System
 
 // TODO: Find a place for MesageBus wrapper
 module MessageBus =
@@ -21,7 +22,11 @@ module AddDbElemDefinition =
         effect {
             let! store = ElemDefinitionStoreRepo.loadCurrent
             let (store', events) = 
-                ElemDefinitionStore.addDbElem (command.ElemCode|> ElemCode) {Table = command.Table; Column = command.Column} command.DataType store
+                ElemDefinitionStore.addDbElem 
+                    (command.ElemCode|> ElemCode) 
+                    {Table = command.Table; Column = command.Column} 
+                    (command.DataType |> Type.GetType) 
+                    store
                 |> Evented.run
 
             do! ElemDefinitionStoreRepo.save store'

@@ -8,4 +8,4 @@ type AddDbElemDefinition(elemCode, table, column, dataType) =
     member _.ElemCode with get() : string = elemCode
     member _.Table with get() : string = table
     member _.Column with get() : string = column
-    member _.DataType with get() : Type = dataType
+    member _.DataType with get() : string = dataType

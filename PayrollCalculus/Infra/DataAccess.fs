@@ -7,7 +7,7 @@ open PayrollCalculus.Domain
 module DataAccess =
 
     module ElemDefinitionStoreRepo =
-        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus", DataDirectory = "Infra\\SQL">
+        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus">
     
         let loadCurrent (connectionString: string) (_: ElemDefinitionStoreRepo.LoadCurrentElemDefinitionStoreSideEffect)  =
             use cmd = new SelectContractCommand(connectionString)
@@ -15,6 +15,7 @@ module DataAccess =
             let results = cmd.Execute ()
             in results |> Seq.map (
                 fun item  -> 
+                    
                     let elemCode = ElemCode(item.Code)
                     in {
                         Code = elemCode;

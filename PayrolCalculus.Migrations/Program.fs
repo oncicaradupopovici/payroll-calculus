@@ -1,30 +1,53 @@
-﻿// Learn more about F# at http://fsharp.org
+﻿namespace PayrollCalculus.Migrations
 
-open System
-open System.Linq
-open DbUp
-open System.Reflection
+module Migrator =
+    open System
+    open System.Linq
+    open DbUp
+    open System.Reflection
+    open Microsoft.Extensions.Configuration
+    open System.IO
 
-[<EntryPoint>]
-let main argv =
-    let connectionString =
-           match argv.FirstOrDefault() with
-           | null -> "Server=(localdb)\\MSSQLLocalDB; Database=test8; Trusted_connection=true"
-           | _ as conStr -> conStr
+    let getConfigConnectionString () =
+        let configuration =
+            let configurationBuilder = 
+                ConfigurationBuilder()
+                    .SetBasePath(Directory.GetCurrentDirectory())
+                    .AddJsonFile("appsettings.json")
+                    .AddUserSecrets(Assembly.GetExecutingAssembly())
+            configurationBuilder.Build()
 
-    //DropDatabase.For.SqlDatabase(connectionString);
-    //EnsureDatabase.For.SqlDatabase(connectionString);
+        configuration.GetConnectionString "PayrollCalculus"
 
-    let upgrader = DeployChanges.To
-                    .SqlDatabase(connectionString, null) 
-                    .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
-                    .LogToConsole()
-                    .Build()
-      
+    let upgradeDatabase drop connectionString =
+        if (drop) then
+               DropDatabase.For.SqlDatabase(connectionString);
+               EnsureDatabase.For.SqlDatabase(connectionString);
+       
+
+        let upgrader = DeployChanges.To
+                        .SqlDatabase(connectionString, null) 
+                        .WithScriptsEmbeddedInAssembly(Assembly.GetExecutingAssembly())
+                        .LogToConsole()
+                        .Build()
+         
+       
+        let result = upgrader.PerformUpgrade()
+        match result.Successful with
+        | true -> printfn "Success!"
+        | false-> printfn "Error! \n %A" (result.Error.Message)
+
+
+    [<EntryPoint>]
+    let main argv =
     
-    let result = upgrader.PerformUpgrade()
-    match result.Successful with
-    | true -> printfn "Success!"
-    | false-> printfn "Error! \n %A" (result.Error.Message)
+        let (drop, connectionString) =
+            match argv with
+            | [| |]                             -> (false, getConfigConnectionString ())
+            | [| "--drop"; connectionString |]  -> (true, connectionString)
+            | [| connectionString |]            -> (false, connectionString)
+            | _ -> failwith "Invalid args. Ussage: PayrollCalculus.Migrations [--drop] [connectionString]"
 
-    0 // return an integer exit code
+        upgradeDatabase drop connectionString
+   
+        0 // return an integer exit code

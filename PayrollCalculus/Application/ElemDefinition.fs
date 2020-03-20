@@ -18,7 +18,7 @@ module AddDbElemDefinition =
                     (command.DataType |> Type.GetType) 
                     store
             match result with
-            |Error (DomainError err) -> return Some (ApplicationError err)
+            |Error (DomainError err) -> return Error (ApplicationError err)
             |Ok (Evented(store', events)) ->
                 do! ElemDefinitionStoreRepo.save (store', events)
                 do! Mediator.dispatchEvents events
@@ -26,7 +26,7 @@ module AddDbElemDefinition =
                 let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}
                 do! MessageBus.publish event
 
-                return None
+                return Ok ()
         }
 
     

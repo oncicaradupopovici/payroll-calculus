@@ -6,8 +6,8 @@ open NBB.Core.Effects.FSharp
 open PayrollCalculus.Application
 
 module CommandHandler =
-    type HandlerFunc<'TCommand when 'TCommand:> ICommand> = ('TCommand -> Effect<ApplicationError option>)
-    type CommandHandler  = (ICommand -> Effect<ApplicationError option>)
+    type HandlerFunc<'TCommand when 'TCommand:> ICommand> = ('TCommand -> Effect<Result<unit,ApplicationError>>)
+    type CommandHandler  = (ICommand -> Effect<Result<unit,ApplicationError>>)
     type HandlerRegistration = (Type * CommandHandler)
 
     let private wrap<'TCommand when 'TCommand:> ICommand> (handlerFunc : HandlerFunc<'TCommand>) : CommandHandler= 

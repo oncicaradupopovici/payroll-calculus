@@ -68,9 +68,9 @@ let main argv =
                 .UsePipeline(fun pipelineBuilder -> 
                     pipelineBuilder
                         .UseCorrelationMiddleware()
-                        .UseMiddleware<CommandMiddleware>()
                         .UseExceptionHandlingMiddleware()
                         .UseDefaultResiliencyMiddleware()
+                        .UseMiddleware<CommandMiddleware>()
                         |> ignore
                 )
             |> ignore

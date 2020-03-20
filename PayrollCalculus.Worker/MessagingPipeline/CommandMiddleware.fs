@@ -22,9 +22,7 @@ type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler
                         | _ -> failwith "Invalid message"
 
                 let! result = interpreter.Interpret (effect |> Effect.unWrap)
-                match result with
-                |Some (ApplicationError err) -> failwith err
-                |None -> ()
+                result |> Result.mapError (fun (ApplicationError err) -> failwith err) |> ignore
 
                 do! next.Invoke()
             } :> Task

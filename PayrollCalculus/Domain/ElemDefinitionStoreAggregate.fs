@@ -57,6 +57,9 @@ module ElemDefinitionStore =
         }
 
     let addDbElem (code:ElemCode) (dbElemDefinition: DbElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
+        if store.ElemDefinitions.ContainsKey code
+        then DomainError "Elem already defined" |> Result.Error
+        else 
         evented {
             let elemDef = {
                 Code = code
@@ -64,10 +67,13 @@ module ElemDefinitionStore =
                 DataType = dataType
             }
             do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
-            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}
-        }
+            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}   
+        } |> Result.Ok
 
     let addFormulaElem (code:ElemCode) (formulaElemDefinition: FormulaElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
+        if store.ElemDefinitions.ContainsKey code
+        then DomainError "Elem already defined" |> Result.Error
+        else
         evented {
             let elemDef = {
                 Code = code
@@ -76,7 +82,7 @@ module ElemDefinitionStore =
             }
             do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
             return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}
-        }
+        } |> Result.Ok
 
     let findElemDefinition ({ElemDefinitions=elemDefinitions}) elemCode = 
         match (elemDefinitions.TryFind elemCode) with

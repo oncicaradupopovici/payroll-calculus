@@ -42,7 +42,7 @@ let main argv =
 
         services.AddScoped<CommandHandler>(Func<IServiceProvider, CommandHandler>(fun _sp -> 
             createCommandHandler [
-                Application.ElemDefinition.AddDbElemDefinition.handler |> toCommandHandlerReg
+                Application.AddDbElemDefinition.handler |> toCommandHandlerReg
             ]
         )) |> ignore
 
@@ -68,9 +68,9 @@ let main argv =
                 .UsePipeline(fun pipelineBuilder -> 
                     pipelineBuilder
                         .UseCorrelationMiddleware()
+                        .UseMiddleware<CommandMiddleware>()
                         .UseExceptionHandlingMiddleware()
                         .UseDefaultResiliencyMiddleware()
-                        .UseMiddleware<CommandMiddleware>()
                         |> ignore
                 )
             |> ignore

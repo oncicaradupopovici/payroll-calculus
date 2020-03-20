@@ -36,12 +36,12 @@ and
 and ElemType = 
     | Db of DbElemDefinition
     | Formula of FormulaElemDefinition
-and DbElemDefinition = {Table:string; Column:string}
-and FormulaElemDefinition = {formula:string; deps: string list}
+and DbElemDefinition = { TableName: string; ColumnName: string }
+and FormulaElemDefinition = { Formula: string; Deps: string list }
 
 type ElemDefinitionStoreEvent = 
     | ElemDefinitionStoreCreated of ElemDefinitionStore
-    | ElemDefinitionAdded of elemDefinitionStoreId:ElemDefinitionStoreId * elemDefinition:ElemDefinition
+    | ElemDefinitionAdded of elemDefinitionStoreId: ElemDefinitionStoreId * elemDefinition: ElemDefinition
 
 
 module ElemDefinitionStore =
@@ -87,7 +87,7 @@ module ElemDefinitionStore =
 module ElemDefinitionStoreRepo =
     type LoadCurrentElemDefinitionStoreSideEffect () =
         interface ISideEffect<ElemDefinitionStore>
-    type SaveElemDefinitionStoreSideEffect = SaveElemDefinitionStoreSideEffect of ElemDefinitionStore
+    type SaveElemDefinitionStoreSideEffect = SaveElemDefinitionStoreSideEffect of store: ElemDefinitionStore * events: ElemDefinitionStoreEvent list
         with interface ISideEffect<unit>
 
     let loadCurrent = Effect.Of (LoadCurrentElemDefinitionStoreSideEffect ()) |> Effect.wrap

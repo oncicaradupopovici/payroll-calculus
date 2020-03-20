@@ -7,29 +7,59 @@ open PayrollCalculus.Domain
 module DataAccess =
 
     module ElemDefinitionStoreRepo =
-        type SelectContractCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus">
-    
+        
+        type SelectElemDefinitionsCommand = SqlCommandProvider<"SELECT * FROM VW_ElemDefinitions" , "name=PayrollCalculus">
+        type PayrollCalculusDb = SqlProgrammabilityProvider<"name=PayrollCalculus">
+
         let loadCurrent (connectionString: string) (_: ElemDefinitionStoreRepo.LoadCurrentElemDefinitionStoreSideEffect)  =
-            use cmd = new SelectContractCommand(connectionString)
+            use cmd = new SelectElemDefinitionsCommand(connectionString)
 
             let results = cmd.Execute ()
             in results |> Seq.map (
                 fun item  -> 
-                    
                     let elemCode = ElemCode(item.Code)
                     in {
-                        Code = elemCode;
+                        Code = elemCode
                         Type = 
                             match item.Type with
-                            | Some "Formula" -> Formula {formula = item.Formula.Value; deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
-                            | Some "Db" -> Db { Table = item.Table.Value; Column = item.Column.Value}
+                            | Some "Formula" -> Formula {Formula = item.Formula.Value; Deps= item.FormulaDeps.Value.Split(';') |> Array.toList}
+                            | Some "Db" -> Db { TableName = item.TableName.Value; ColumnName = item.ColumnName.Value}
                             | _ -> failwith "DB configuration errror"
                         DataType = Type.GetType(item.DataType)
                     }
                 )
             |> ElemDefinitionStore.create
 
-        let save (_connectionString: string) (_sideEffect: ElemDefinitionStoreRepo.SaveElemDefinitionStoreSideEffect) = ()
+        let save (connectionString: string) (sideEffect: ElemDefinitionStoreRepo.SaveElemDefinitionStoreSideEffect) =
+            use conn = new System.Data.SqlClient.SqlConnection (connectionString)
+            conn.Open()
+
+            let insertElemDefinition elemDefinition = 
+                let (ElemCode code) = elemDefinition.Code
+                let dataType = elemDefinition.DataType.FullName
+                let elemDefinitions = new PayrollCalculusDb.dbo.Tables.ElemDefinition()
+                let newRow = elemDefinitions.NewRow(code, dataType)
+                elemDefinitions.Rows.Add newRow
+                elemDefinitions.Update(conn) |> ignore
+                newRow.ElemDefinitionId
+
+            let insertDbElemDefinition (dbElemDefinition: DbElemDefinition) elemDefinitionId =
+                let dbElemDefinitions = new PayrollCalculusDb.dbo.Tables.DbElemDefinition()
+                dbElemDefinitions.AddRow(dbElemDefinition.TableName, dbElemDefinition.ColumnName, elemDefinitionId)
+                dbElemDefinitions.Update(conn) |> ignore
+
+            let processEvent event = 
+                match event with
+                | ElemDefinitionAdded (_elemDefinitionStoreId, elemDefinition) ->
+                    let elemDefinitionId = insertElemDefinition elemDefinition
+                    match elemDefinition.Type with
+                        |Db dbElemDefinition -> insertDbElemDefinition dbElemDefinition elemDefinitionId
+                        |Formula _formulaElemDefinition -> ()
+                | ElemDefinitionStoreCreated _ -> ()
+
+            let (ElemDefinitionStoreRepo.SaveElemDefinitionStoreSideEffect (_store, events)) = sideEffect
+            events |> List.map processEvent |> ignore
+
 
     module DbElemValue =
         open System.Data.SqlClient
@@ -47,7 +77,7 @@ module DataAccess =
 
         let loadValue (connectionString: string) ({Definition=definition; Ctx=ctx} : DbElemValue.LoadSideEffect) : Result<obj, string> =
             let executeCommand  = SqlCommandHelper.executeScalar connectionString   
-            let {Table=table; Column=column} = definition
+            let {TableName=table; ColumnName=column} = definition
             let (PersonId personId) = ctx.PersonId
             let result = 
                 executeCommand

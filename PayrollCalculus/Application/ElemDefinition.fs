@@ -24,12 +24,12 @@ module AddDbElemDefinition =
             let (store', events) = 
                 ElemDefinitionStore.addDbElem 
                     (command.ElemCode|> ElemCode) 
-                    {Table = command.Table; Column = command.Column} 
+                    {TableName = command.Table; ColumnName = command.Column} 
                     (command.DataType |> Type.GetType) 
                     store
                 |> Evented.run
 
-            do! ElemDefinitionStoreRepo.save store'
+            do! ElemDefinitionStoreRepo.save (store', events)
             do! Mediator.dispatchEvents events
 
             let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}

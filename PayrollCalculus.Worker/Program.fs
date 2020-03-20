@@ -30,8 +30,8 @@ let main argv =
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional = true)
             .AddJsonFile(sprintf "appsettings.%s.json" context.HostingEnvironment.EnvironmentName, optional = true)
-            .AddEnvironmentVariables()
             .AddUserSecrets(Assembly.GetExecutingAssembly())
+            .AddEnvironmentVariables()
             .AddCommandLine(argv)
             |> ignore
 

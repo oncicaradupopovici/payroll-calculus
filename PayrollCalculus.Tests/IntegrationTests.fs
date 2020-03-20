@@ -46,7 +46,7 @@ let ``It shoud evaluate formula with params (integration)`` () =
                 GO
                 SET IDENTITY_INSERT [dbo].[DbElemDefinition] ON 
                 GO
-                INSERT [dbo].[DbElemDefinition] ([DbElemDefinitionId], [Table], [Column], [ElemDefinitionId]) VALUES (1, N'Salarii   ', N'Brut      ', 1)
+                INSERT [dbo].[DbElemDefinition] ([DbElemDefinitionId], [TableName], [ColumnName], [ElemDefinitionId]) VALUES (1, N'Salarii   ', N'Brut      ', 1)
                 GO
                 SET IDENTITY_INSERT [dbo].[DbElemDefinition] OFF
                 GO

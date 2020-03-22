@@ -10,6 +10,7 @@ open NBB.Core.Effects.FSharp
 open System
 open NBB.Core.Abstractions
 open System.Threading
+open PayrollCalculus.Application
 
 type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler) = 
     interface IPipelineMiddleware<MessagingEnvelope> with
@@ -20,6 +21,8 @@ type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler
                         | :? ICommand as command -> commandhandler command 
                         | _ -> failwith "Invalid message"
 
-                do! interpreter.Interpret (effect |> Effect.unWrap)
+                let! result = interpreter.Interpret (effect |> Effect.unWrap)
+                result |> Result.mapError (fun (ApplicationError err) -> failwith err) |> ignore
+
                 do! next.Invoke()
             } :> Task

@@ -13,6 +13,12 @@ Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PayrollCalculus.Api", "Payr
 EndProject
 Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "PayrollCalculus.Worker", "PayrollCalculus.Worker\PayrollCalculus.Worker.fsproj", "{5C8B87E7-9CAC-4E02-9735-C92B82D39B97}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{40B1CFE9-5626-49D1-9B2F-B9F26F23CEB1}"
+	ProjectSection(SolutionItems) = preProject
+		dependencies.props = dependencies.props
+		Directory.Build.props = Directory.Build.props
+	EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

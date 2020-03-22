@@ -9,5 +9,5 @@ module ElemDefinitions =
     let handler : HttpHandler = 
         subRoute "/elemDefinitions" (
             choose [
-                POST >=> route  "/add"  >=> bindJson<AddElemDefinition> publishCommand
+                POST >=> route  "/addDbElem"  >=> bindJson<AddDbElemDefinition> publishCommand
             ])

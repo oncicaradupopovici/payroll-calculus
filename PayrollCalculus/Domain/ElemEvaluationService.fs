@@ -65,7 +65,7 @@ module ElemEvaluationService =
     type private ComputeElem  = ElemDefinitionStore -> ElemCode -> StateEffect<ElemCache, Elem<obj>>
     let rec private computeElem: ComputeElem =
         fun elemDefinitionStore elemCode -> 
-            let buildFormulaElem ({formula=formula}: FormulaElemDefinition)  =
+            let buildFormulaElem ({Formula=formula}: FormulaElemDefinition)  =
                 stateEffect {
                     let! {Func=func;Parameters=parameters} = formula |> Parser.parseFormula elemDefinitionStore.ElemDefinitions |> StateEffect.lift
                     let! paramElems = parameters |> List.traverseStateEffect (ElemCode >> computeElem elemDefinitionStore)

@@ -19,6 +19,7 @@ open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
 open Interpreter
 open CommandHandler
+open PayrollCalculus.Infra.DataAccess
 
 [<EntryPoint>]
 let main argv =
@@ -29,16 +30,19 @@ let main argv =
             .SetBasePath(Directory.GetCurrentDirectory())
             .AddJsonFile("appsettings.json", optional = true)
             .AddJsonFile(sprintf "appsettings.%s.json" context.HostingEnvironment.EnvironmentName, optional = true)
-            .AddEnvironmentVariables()
             .AddUserSecrets(Assembly.GetExecutingAssembly())
+            .AddEnvironmentVariables()
             .AddCommandLine(argv)
             |> ignore
 
     // Services configuration
     let serviceConfig (context : HostBuilderContext) (services : IServiceCollection) =
+
+        let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
+
         services.AddScoped<CommandHandler>(Func<IServiceProvider, CommandHandler>(fun _sp -> 
             createCommandHandler [
-                Application.ElemDefinition.AddElemDefinition.handler |> toCommandHandlerReg
+                Application.AddDbElemDefinition.handler |> toCommandHandlerReg
             ]
         )) |> ignore
 
@@ -48,6 +52,8 @@ let main argv =
 
                 let interpreter = createInterpreter [
                     publish |> toHandlerReg
+                    ElemDefinitionStoreRepo.loadCurrent payrollConnString |> toHandlerReg
+                    ElemDefinitionStoreRepo.save payrollConnString |> toHandlerReg
                 ]
 
                 interpreter :> IInterpreter
@@ -57,7 +63,7 @@ let main argv =
         services.AddNatsMessaging() |> ignore
         services
             .AddMessagingHost()
-                .AddSubscriberServices(fun config -> config.AddTypes(typeof<AddElemDefinition>) |> ignore)
+                .AddSubscriberServices(fun config -> config.AddTypes(typeof<AddDbElemDefinition>) |> ignore)
                 .WithDefaultOptions()
                 .UsePipeline(fun pipelineBuilder -> 
                     pipelineBuilder

@@ -3,6 +3,7 @@
 open System
 open NBB.Core.Effects
 open NBB.Core.Effects.FSharp
+open NBB.Core.Evented.FSharp
 
 [<CustomEquality; NoComparison>]
 type ElemDefinitionStore = {
@@ -35,14 +36,53 @@ and
 and ElemType = 
     | Db of DbElemDefinition
     | Formula of FormulaElemDefinition
-and DbElemDefinition = {table:string; column:string}
-and FormulaElemDefinition = {formula:string; deps: string list}
+and DbElemDefinition = { TableName: string; ColumnName: string }
+and FormulaElemDefinition = { Formula: string; Deps: string list }
+
+type ElemDefinitionStoreEvent = 
+    | ElemDefinitionStoreCreated of ElemDefinitionStore
+    | ElemDefinitionAdded of elemDefinitionStoreId: ElemDefinitionStoreId * elemDefinition: ElemDefinition
 
 
 module ElemDefinitionStore =
     let create (elemDefs: ElemDefinition seq) = 
         let elemDefinitions = elemDefs |> Seq.map (fun elemDef -> (elemDef.Code, elemDef)) |> Map.ofSeq
         in {Id = Guid.Empty |> ElemDefinitionStoreId; ElemDefinitions = elemDefinitions}
+
+    let createNew (elemDefs: ElemDefinition seq) = 
+        evented {
+            let store = create elemDefs
+            do! addEvent ElemDefinitionStoreCreated 
+            return store
+        }
+
+    let addDbElem (code:ElemCode) (dbElemDefinition: DbElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
+        if store.ElemDefinitions.ContainsKey code
+        then DomainError "Elem already defined" |> Result.Error
+        else 
+        evented {
+            let elemDef = {
+                Code = code
+                Type = Db(dbElemDefinition)
+                DataType = dataType
+            }
+            do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
+            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}   
+        } |> Result.Ok
+
+    let addFormulaElem (code:ElemCode) (formulaElemDefinition: FormulaElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
+        if store.ElemDefinitions.ContainsKey code
+        then DomainError "Elem already defined" |> Result.Error
+        else
+        evented {
+            let elemDef = {
+                Code = code
+                Type = Formula(formulaElemDefinition)
+                DataType = dataType
+            }
+            do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
+            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}
+        } |> Result.Ok
 
     let findElemDefinition ({ElemDefinitions=elemDefinitions}) elemCode = 
         match (elemDefinitions.TryFind elemCode) with
@@ -51,8 +91,11 @@ module ElemDefinitionStore =
 
 
 module ElemDefinitionStoreRepo =
-    type LoadCurrentDefinitionStoreSideEffect () =
+    type LoadCurrentElemDefinitionStoreSideEffect () =
         interface ISideEffect<ElemDefinitionStore>
-    
-    let loadCurrentElemDefinitionStore () = Effect.Of (LoadCurrentDefinitionStoreSideEffect ()) |> Effect.wrap
+    type SaveElemDefinitionStoreSideEffect = SaveElemDefinitionStoreSideEffect of store: ElemDefinitionStore * events: ElemDefinitionStoreEvent list
+        with interface ISideEffect<unit>
+
+    let loadCurrent = Effect.Of (LoadCurrentElemDefinitionStoreSideEffect ()) |> Effect.wrap
+    let save store = Effect.Of (SaveElemDefinitionStoreSideEffect store) |> Effect.wrap
 

@@ -3,7 +3,7 @@
   <PropertyGroup>
     <OutputType>Exe</OutputType>
     <TargetFramework>netcoreapp3.1</TargetFramework>
-    <UserSecretsId>dfe3867d-1a56-401b-a681-68251731bb7f</UserSecretsId>
+    <UserSecretsId>6cab40d7-1c30-4e96-8fc6-c6c6477176ce</UserSecretsId>
   </PropertyGroup>
 
   <ItemGroup>
@@ -25,11 +25,11 @@
     <PackageReference Include="Microsoft.Extensions.Configuration.CommandLine" Version="3.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" Version="3.1.2" />
     <PackageReference Include="Microsoft.Extensions.Configuration.Json" Version="3.1.2" />
-    <PackageReference Include="NBB.Correlation" Version="4.1.18" />
-    <PackageReference Include="NBB.Correlation.Serilog" Version="4.1.18" />
-    <PackageReference Include="NBB.Messaging.Host" Version="4.1.18" />
-    <PackageReference Include="NBB.Messaging.Nats" Version="4.1.18" />
-    <PackageReference Include="NBB.Messaging.Effects" Version="4.1.18" />
+    <PackageReference Include="NBB.Correlation" Version="$(NBBPackagesVersion)" />
+    <PackageReference Include="NBB.Correlation.Serilog" Version="$(NBBPackagesVersion)" />
+    <PackageReference Include="NBB.Messaging.Host" Version="$(NBBPackagesVersion)" />
+    <PackageReference Include="NBB.Messaging.Nats" Version="$(NBBPackagesVersion)" />
+    <PackageReference Include="NBB.Messaging.Effects" Version="$(NBBPackagesVersion)" />
     <PackageReference Include="Serilog" Version="2.9.0" />
     <PackageReference Include="Serilog.Extensions.Logging" Version="3.0.1" />
     <PackageReference Include="Serilog.Sinks.Console" Version="3.1.1" />

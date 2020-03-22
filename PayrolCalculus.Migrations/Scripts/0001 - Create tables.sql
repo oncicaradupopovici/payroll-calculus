@@ -5,8 +5,8 @@ SET QUOTED_IDENTIFIER ON
 GO 
 CREATE TABLE [dbo].[DbElemDefinition](
 	[DbElemDefinitionId] [int] IDENTITY(1,1) NOT NULL,
-	[Table] [nchar](10) NOT NULL,  
-	[Column] [nchar](10) NOT NULL,
+	[TableName] [nchar](10) NOT NULL,  
+	[ColumnName] [nchar](10) NOT NULL,
 	[ElemDefinitionId] [int] NOT NULL,
  CONSTRAINT [PK_DbElemDefinition] PRIMARY KEY CLUSTERED  
 (
@@ -73,8 +73,8 @@ CREATE view [dbo].[VW_ElemDefinitions] AS
 		(CASE 
 			WHEN ded.DbElemDefinitionId IS NOT NULL THEN 'Db' 
 			WHEN fed.FormulaId IS NOT NULL THEN 'Formula' END) as [Type],
-		ded.[Table], 
-		ded.[Column], 
+		ded.[TableName], 
+		ded.[ColumnName], 
 		fed.Formula,
 		STUFF((
 			select ';'+ ed1.Code 

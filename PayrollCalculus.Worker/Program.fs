@@ -20,6 +20,7 @@ open PayrollCalculus.Infra
 open Interpreter
 open CommandHandler
 open EventHandler
+open DomainEventHandler
 open PayrollCalculus.Infra.DataAccess
 
 [<EntryPoint>]
@@ -59,6 +60,7 @@ let main argv =
                     publish |> toHandlerReg
                     ElemDefinitionStoreRepo.loadCurrent payrollConnString |> toHandlerReg
                     ElemDefinitionStoreRepo.save payrollConnString |> toHandlerReg
+                    Mediator.getEventMediator (createDomainEventHandler []) |> toHandlerReg
                 ]
 
                 interpreter :> IInterpreter

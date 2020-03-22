@@ -20,6 +20,8 @@
     <Compile Include="Infra\Interpreter.fs" />
     <Compile Include="Infra\CommandHandler.fs" />
     <Compile Include="Infra\EventHandler.fs" />
+    <Compile Include="Infra\DomainEventHandler.fs" />
+    <Compile Include="Infra\Mediator.fs" />
    
     <None Include="App.config" />
   </ItemGroup>

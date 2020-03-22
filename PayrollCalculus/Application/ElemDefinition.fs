@@ -4,6 +4,7 @@ open NBB.Core.Effects.FSharp
 open PayrollCalculus.PublishedLanguage
 open NBB.Application.DataContracts
 open PayrollCalculus.Domain
+open PayrollCalculus.Application
 open NBB.Core.Evented.FSharp
 open System
 
@@ -21,12 +22,15 @@ module AddDbElemDefinition =
             |Error (DomainError err) -> return Error (ApplicationError err)
             |Ok (Evented(store', events)) ->
                 do! ElemDefinitionStoreRepo.save (store', events)
-                do! Mediator.dispatchEvents events
+                let! mediator = Mediator.getEventMediator<ElemDefinitionStoreEvent>
+                let! result = mediator.dispatchEvents events
+                match result with
+                | Ok () ->
+                    let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}
+                    do! MessageBus.publish event
 
-                let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}
-                do! MessageBus.publish event
-
-                return Ok ()
+                    return Ok ()
+                | Error _ -> return result
         }
 
     

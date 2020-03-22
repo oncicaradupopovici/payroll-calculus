@@ -12,13 +12,14 @@ open NBB.Core.Abstractions
 open System.Threading
 open PayrollCalculus.Application
 
-type CommandMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler) = 
+type MediatorMiddleware(interpreter: IInterpreter, commandhandler: CommandHandler, eventHandler: PayrollCalculus.Infra.EventHandler) = 
     interface IPipelineMiddleware<MessagingEnvelope> with
-        member _.Invoke (message: MessagingEnvelope, cancellationToken: CancellationToken, next: Func<Task>) : Task =
+        member _.Invoke (message: MessagingEnvelope, _cancellationToken: CancellationToken, next: Func<Task>) : Task =
             task {
                 let effect = 
                     match message.Payload with
                         | :? ICommand as command -> commandhandler command 
+                        | :? IEvent as event -> eventHandler event 
                         | _ -> failwith "Invalid message"
 
                 let! result = interpreter.Interpret (effect |> Effect.unWrap)

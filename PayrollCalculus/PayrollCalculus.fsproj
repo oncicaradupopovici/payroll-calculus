@@ -19,6 +19,7 @@
     <Compile Include="Infra\FormulaParser.fs" />
     <Compile Include="Infra\Interpreter.fs" />
     <Compile Include="Infra\CommandHandler.fs" />
+    <Compile Include="Infra\EventHandler.fs" />
    
     <None Include="App.config" />
   </ItemGroup>

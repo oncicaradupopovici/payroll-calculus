@@ -19,6 +19,7 @@ open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
 open Interpreter
 open CommandHandler
+open EventHandler
 open PayrollCalculus.Infra.DataAccess
 
 [<EntryPoint>]
@@ -46,6 +47,10 @@ let main argv =
             ]
         )) |> ignore
 
+        services.AddScoped<PayrollCalculus.Infra.EventHandler>(Func<IServiceProvider, PayrollCalculus.Infra.EventHandler>(fun _sp -> 
+            createEventHandler []
+        )) |> ignore
+
         services.AddSingleton<IInterpreter>(fun sp ->
                 let publishHandler = PublishMessage.Handler(sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>())
                 let publish = publishHandler.Handle >> Async.AwaitTask >> Async.RunSynchronously >> (fun _unit -> Unit())
@@ -70,7 +75,7 @@ let main argv =
                         .UseCorrelationMiddleware()
                         .UseExceptionHandlingMiddleware()
                         .UseDefaultResiliencyMiddleware()
-                        .UseMiddleware<CommandMiddleware>()
+                        .UseMiddleware<MediatorMiddleware>()
                         |> ignore
                 )
             |> ignore

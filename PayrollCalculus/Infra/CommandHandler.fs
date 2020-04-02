@@ -3,11 +3,10 @@
 open NBB.Core.Abstractions
 open System
 open NBB.Core.Effects.FSharp
-open PayrollCalculus.Application
 
 module CommandHandler =
-    type HandlerFunc<'TCommand when 'TCommand:> ICommand> = ('TCommand -> Effect<Result<unit,ApplicationError>>)
-    type CommandHandler  = (ICommand -> Effect<Result<unit,ApplicationError>>)
+    type HandlerFunc<'TCommand when 'TCommand:> ICommand> = ('TCommand -> Effect<unit>)
+    type CommandHandler  = (ICommand -> Effect<unit>)
     type HandlerRegistration = (Type * CommandHandler)
 
     let private wrap<'TCommand when 'TCommand:> ICommand> (handlerFunc : HandlerFunc<'TCommand>) : CommandHandler= 

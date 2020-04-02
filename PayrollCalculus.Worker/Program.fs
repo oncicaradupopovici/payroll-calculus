@@ -54,6 +54,7 @@ let main argv =
                     publish |> toHandlerReg
                     ElemDefinitionStoreRepo.loadCurrent payrollConnString |> toHandlerReg
                     ElemDefinitionStoreRepo.save payrollConnString |> toHandlerReg
+                    Common.handleException |> toHandlerReg
                 ]
 
                 interpreter :> IInterpreter

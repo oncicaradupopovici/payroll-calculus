@@ -57,32 +57,34 @@ module ElemDefinitionStore =
         }
 
     let addDbElem (code:ElemCode) (dbElemDefinition: DbElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
-        if store.ElemDefinitions.ContainsKey code
-        then DomainError "Elem already defined" |> Result.Error
-        else 
-        evented {
-            let elemDef = {
-                Code = code
-                Type = Db(dbElemDefinition)
-                DataType = dataType
+        effect {
+            if store.ElemDefinitions.ContainsKey code 
+            then do! Exception.throw "Elem already defined"
+            return evented {
+                let elemDef = {
+                    Code = code
+                    Type = Db(dbElemDefinition)
+                    DataType = dataType
+                }
+                do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
+                return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}   
             }
-            do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
-            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}   
-        } |> Result.Ok
+        }
 
     let addFormulaElem (code:ElemCode) (formulaElemDefinition: FormulaElemDefinition) (dataType: Type) (store: ElemDefinitionStore) =
-        if store.ElemDefinitions.ContainsKey code
-        then DomainError "Elem already defined" |> Result.Error
-        else
-        evented {
-            let elemDef = {
-                Code = code
-                Type = Formula(formulaElemDefinition)
-                DataType = dataType
+        effect {
+            if store.ElemDefinitions.ContainsKey code 
+            then do! Exception.throw "Elem already defined"
+            return evented {
+                let elemDef = {
+                    Code = code
+                    Type = Formula(formulaElemDefinition)
+                    DataType = dataType
+                }
+                do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
+                return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}
             }
-            do! addEvent (ElemDefinitionAdded (store.Id, elemDef))
-            return {store with ElemDefinitions = store.ElemDefinitions.Add (code, elemDef)}
-        } |> Result.Ok
+        }
 
     let findElemDefinition ({ElemDefinitions=elemDefinitions}) elemCode = 
         match (elemDefinitions.TryFind elemCode) with

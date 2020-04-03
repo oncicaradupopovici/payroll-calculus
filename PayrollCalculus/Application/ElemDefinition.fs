@@ -11,14 +11,14 @@ module AddDbElemDefinition =
     let handler (command: AddDbElemDefinition) =
         effect {
             let! store = ElemDefinitionStoreRepo.loadCurrent
-            let! Evented(store', events) = 
+            let! eventedStore = 
                 ElemDefinitionStore.addDbElem 
                     (command.ElemCode|> ElemCode) 
                     {TableName = command.Table; ColumnName = command.Column} 
                     (command.DataType |> Type.GetType) 
                     store
-            do! ElemDefinitionStoreRepo.save (store', events)
-            do! Mediator.dispatchEvents events
+            do! eventedStore |> Evented.run |> ElemDefinitionStoreRepo.save 
+            do! eventedStore |> Evented.exec |> Mediator.dispatchEvents
 
             let event: ElemDefinitionAdded = {ElemCode=command.ElemCode; Metadata = EventMetadata.Default()}
             do! MessageBus.publish event

@@ -7,6 +7,10 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="Mediator\NotificationPipeline.fs" />
+    <Compile Include="Mediator\RequestPipeline.fs" />
+    <Compile Include="Mediator\RequestHandler.fs" />
+    <Compile Include="Mediator\Dispatcher.fs" />
     <Compile Include="MessagingPipeline\CommandMiddleware.fs" />
     <Content Include="appsettings.json">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>

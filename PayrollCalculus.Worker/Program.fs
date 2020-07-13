@@ -18,8 +18,18 @@ open PayrollCalculus.Worker.MessagingPipeline
 open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
 open Interpreter
-open CommandHandler
+open Mediator1.RequestPipeline
+open Dispatcher.ApplicationDispatcher
 open PayrollCalculus.Infra.DataAccess
+open NBB.Core.Effects.FSharp
+
+//type CommandHandler = Mediator.RequestHandler<NBB.Core.Abstractions.ICommand, unit>
+//type CommandHandler<'T> = Mediator.RequestHandler<'T :> NBB.Core.Abstractions.ICommand, unit>
+
+
+type CommandHandler = Mediator1.RequestHandler<NBB.Core.Abstractions.ICommand, unit>
+type CommandHandler<'T> = Mediator1.RequestHandler<'T :> NBB.Core.Abstractions.ICommand, unit>
+type CommandPipelineHandler = Mediator1.PipelineHandler<NBB.Core.Abstractions.ICommand, unit>
 
 [<EntryPoint>]
 let main argv =
@@ -35,15 +45,24 @@ let main argv =
             .AddCommandLine(argv)
             |> ignore
 
+    let middleware : CommandPipelineHandler = 
+        fun next req -> effect { return! (next req) } 
+
+    let commandPipeline = middleware >> choose [
+        create1 Application.AddDbElemDefinition.handler
+    ]
+
+    let eventPipeline = (fun _ -> empty)
+
+    let messagePipeline = create commandPipeline eventPipeline
+
     // Services configuration
     let serviceConfig (context : HostBuilderContext) (services : IServiceCollection) =
-
+    
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
 
-        services.AddScoped<CommandHandler>(Func<IServiceProvider, CommandHandler>(fun _sp -> 
-            createCommandHandler [
-                Application.AddDbElemDefinition.handler |> toCommandHandlerReg
-            ]
+        services.AddScoped<Dispatcher.MessageHandler>(Func<IServiceProvider, Dispatcher.MessageHandler>(fun _sp -> 
+            dispatch messagePipeline
         )) |> ignore
 
         services.AddSingleton<IInterpreter>(fun sp ->

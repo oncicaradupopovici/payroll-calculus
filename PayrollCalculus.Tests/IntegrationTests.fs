@@ -2,17 +2,18 @@
 
 open System
 open System.IO
-open System.Reflection
 open FsUnit.Xunit
 open Microsoft.Extensions.Configuration
+open NBB.Core.Effects
 open NBB.Core.Effects.FSharp
 open Xunit
 open DbUp
 open PayrollCalculus.Infra
-open Interpreter
+open SideEffectMediator
 open DataAccess
 open PayrollCalculus.Application.Evaluation
 open PayrollCalculus.Migrations
+open System.Threading.Tasks
 
 let configuration =
     let configurationBuilder = 
@@ -23,6 +24,13 @@ let configuration =
 
 let payrollConnString = configuration.GetConnectionString "PayrollCalculus"
 let hcmConnectionString = configuration.GetConnectionString "Hcm"
+
+type MockSideEffectMediator() =
+    interface ISideEffectMediator with
+        member _.Run<'TOutput>(sideEffect, cancellationToken) : Task<'TOutput> = 
+            match sideEffect with
+            | :? Thunk.SideEffect<'TOutput> as tse -> tse.ImpureFn.Invoke(cancellationToken)
+            | _ -> failwith "Handler not found"
 
 
 [<Fact>]
@@ -99,11 +107,13 @@ let ``It shoud evaluate formula with params (integration)`` () =
     let query : EvaluateMultipleCodes.Query = 
         { ElemCodes = ["SalariuNet"; "Impozit"]; PersonId = Guid.Parse("33733a83-d4a9-43c8-ab4e-49c53919217d"); Year=2009; Month=1;}
 
-    let interpreter = createInterpreter [
-            FormulaParser.parse                                                       |> toHandlerReg;
-            ElemDefinitionStoreRepo.loadCurrent payrollConnString  |> toHandlerReg;
-            DbElemValue.loadValue hcmConnectionString                               |> toHandlerReg;
-        ]
+    let sideEffectMediator = makeSideEffectMediatorDecorator (MockSideEffectMediator()) [
+                FormulaParser.parse                                                     |> toHandlerReg;
+                ElemDefinitionStoreRepo.loadCurrent payrollConnString                   |> toHandlerReg;
+                DbElemValue.loadValue hcmConnectionString                               |> toHandlerReg;
+            ]
+
+    let interpreter = Interpreter(sideEffectMediator)
 
     let eff = EvaluateMultipleCodes.handler query
 

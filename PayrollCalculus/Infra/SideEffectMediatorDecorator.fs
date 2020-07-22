@@ -2,10 +2,9 @@
 
 open System
 open NBB.Core.Effects
-open NBB.Core.Effects.FSharp
 open System.Threading.Tasks
 
-module Interpreter =
+module SideEffectMediator =
     type HandlerFunc<'TSideEffect, 'TOutput when 'TSideEffect:> ISideEffect<'TOutput>> = ('TSideEffect -> 'TOutput)
     type HandlerRegistration = (Type * ISideEffectHandler)
     
@@ -16,30 +15,28 @@ module Interpreter =
                     | :? 'TSideEffect as sideEffect -> handlerFunc(sideEffect) |> Task.FromResult
                     | _ -> failwith "Wrong type"
 
-
-    type SideEffectHandlerFactory(handlerRegistrations: seq<HandlerRegistration>) =
+    type SideEffectMediatorDecorator (innerMediator: ISideEffectMediator, handlerRegistrations: seq<HandlerRegistration>) =
         let handlersMap = handlerRegistrations |> Seq.map (fun (key, value) -> (key.FullName, value)) |> Map.ofSeq
 
-        interface ISideEffectHandlerFactory with
-            member _.GetSideEffectHandlerFor<'TOutput>(sideEffect) = 
+        interface ISideEffectMediator with
+            member _.Run<'TOutput>(sideEffect, cancellationToken) = 
                 let handlerOption = handlersMap |> Map.tryFind (sideEffect.GetType().FullName)
                 match handlerOption with
                 | Some handler ->
                     match handler with 
-                    | :?  ISideEffectHandler<ISideEffect<'TOutput>,'TOutput> as handler -> handler
+                    | :?  ISideEffectHandler<ISideEffect<'TOutput>,'TOutput> as handler -> handler.Handle(sideEffect, cancellationToken)
                     | _ -> failwith "Wrong type"
-                | _ -> failwith "Invalid handler"
+                | _ -> innerMediator.Run(sideEffect, cancellationToken)
 
     let toHandlerReg (func: HandlerFunc<'TSideEffect, 'TOutput>) : HandlerRegistration =
         (typeof<'TSideEffect>,  HandlerWrapper(func) :> ISideEffectHandler)      
 
-    let createInterpreter : (seq<HandlerRegistration> -> Interpreter) = 
-         SideEffectHandlerFactory >> Interpreter
+    let makeSideEffectMediatorDecorator innerMediator handlerRegistrations = 
+        SideEffectMediatorDecorator(innerMediator, handlerRegistrations) :> ISideEffectMediator
 
-    let show interpreter eff = eff |> Effect.interpret interpreter |> Async.RunSynchronously |> printfn "%A"
-
-
-    
+    //let createInterpreter sideEffectMediator = Interpreter(sideEffectMediator)
+    //let show interpreter eff = eff |> Effect.interpret interpreter |> Async.RunSynchronously |> printfn "%A"
+        
     //module HandlerBuilder =
     //    let empty : HandlerRegistration list = []
     //    let add (func: HandlerFunc<'TSideEffect, 'TOutput>) (handlerRegistrations: HandlerRegistration list) =

@@ -132,8 +132,8 @@ let ``It shoud evaluate formula with params`` () =
             }
         | _ -> {Func= (fun _ -> (1:>obj)); Parameters= []}
 
-    let factory = Handlers.getSideEffectMediator((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
-    let interpreter = NBB.Core.Effects.Interpreter(factory)
+    let sideEffectMediator = Handlers.getSideEffectMediator((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
+    let interpreter = NBB.Core.Effects.Interpreter(sideEffectMediator)
 
     let eff = effect {
         let! elemDefinitionStore = loadElemDefinitions ()

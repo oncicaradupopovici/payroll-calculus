@@ -16,7 +16,6 @@ open NBB.Resiliency
 open PayrollCalculus
 open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
-open SideEffectMediator
 open CommandHandler
 open PayrollCalculus.Infra.DataAccess
 open NBB.Core.Abstractions
@@ -53,13 +52,11 @@ let main argv =
 
         services.AddEffects() |> ignore
         services.AddMessagingEffects() |> ignore
-        services.Decorate<ISideEffectMediator>(fun innerMediator ->
-            makeSideEffectMediatorDecorator innerMediator [
-                ElemDefinitionStoreRepo.loadCurrent payrollConnString |> toHandlerReg
-                ElemDefinitionStoreRepo.save payrollConnString |> toHandlerReg
-                Common.handleException |> toHandlerReg
-            ]
-        ) |> ignore
+        services
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.loadCurrent payrollConnString)
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.save payrollConnString)
+            .AddSideEffectHandler(Common.handleException)
+            |> ignore;
 
         services.AddResiliency() |> ignore
         services.AddNatsMessaging() |> ignore

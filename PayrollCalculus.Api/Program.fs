@@ -16,7 +16,6 @@ open NBB.Messaging.Nats
 open NBB.Core.Effects
 open NBB.Correlation.AspNet
 open PayrollCalculus.Infra
-open SideEffectMediator
 open PayrollCalculus.Infra.DataAccess
 
 // ---------------------------------
@@ -67,13 +66,11 @@ module App =
 
         services.AddEffects() |> ignore
         services.AddMessagingEffects() |> ignore
-        services.Decorate<ISideEffectMediator>(fun innerMediator ->
-            makeSideEffectMediatorDecorator innerMediator [
-                FormulaParser.parse                                                         |> toHandlerReg;
-                ElemDefinitionStoreRepo.loadCurrent payrollConnString                       |> toHandlerReg;
-                DbElemValue.loadValue hcmConnectionString                                   |> toHandlerReg
-            ]
-        ) |> ignore
+        services
+            .AddSideEffectHandler(FormulaParser.parse)
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.loadCurrent payrollConnString)
+            .AddSideEffectHandler(DbElemValue.loadValue hcmConnectionString)
+            |> ignore;
 
         services.AddNatsMessaging() |> ignore
         services.AddCors()

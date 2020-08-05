@@ -18,7 +18,7 @@
 
   <ItemGroup>
     <PackageReference Include="dbup-sqlserver" Version="4.3.1" />
-    
+    <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="$(MicrosoftExtensionsPackagesVersion)" />
     <PackageReference Include="FSharp.Interop.Dynamic" Version="5.0.1.268" />
     <PackageReference Include="FsUnit.xUnit" Version="3.8.0" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="3.1.1" />

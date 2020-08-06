@@ -11,14 +11,12 @@ open Microsoft.Extensions.Hosting
 open Microsoft.Extensions.Logging
 open Microsoft.Extensions.DependencyInjection
 open Microsoft.Extensions.Configuration
-open PayrollCalculus.Infra
-open DataAccess
-open Interpreter
 open NBB.Messaging.Effects
 open NBB.Messaging.Nats
 open NBB.Core.Effects
 open NBB.Correlation.AspNet
-
+open PayrollCalculus.Infra
+open PayrollCalculus.Infra.DataAccess
 
 // ---------------------------------
 // Web app
@@ -66,19 +64,13 @@ module App =
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
         let hcmConnectionString = context.Configuration.GetConnectionString "Hcm"
 
-        services.AddSingleton<IInterpreter>(fun sp ->
-            let publishHandler = PublishMessage.Handler(sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>())
-            let publish = publishHandler.Handle >> Async.AwaitTask >> Async.RunSynchronously >> (fun _unit -> Unit())
-
-            let interpreter = createInterpreter [
-                FormulaParser.parse                                                         |> toHandlerReg;
-                ElemDefinitionStoreRepo.loadCurrent payrollConnString                       |> toHandlerReg;
-                DbElemValue.loadValue hcmConnectionString                                   |> toHandlerReg;
-                publish                                                                     |> toHandlerReg
-            ]
-
-            interpreter :> IInterpreter
-        ) |> ignore
+        services.AddEffects() |> ignore
+        services.AddMessagingEffects() |> ignore
+        services
+            .AddSideEffectHandler(FormulaParser.parse)
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.loadCurrent payrollConnString)
+            .AddSideEffectHandler(DbElemValue.loadValue hcmConnectionString)
+            |> ignore;
 
         services.AddNatsMessaging() |> ignore
         services.AddCors()

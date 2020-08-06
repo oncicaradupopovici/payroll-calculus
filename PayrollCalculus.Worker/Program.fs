@@ -14,12 +14,12 @@ open NBB.Messaging.Host.MessagingPipeline;
 open NBB.Core.Effects
 open NBB.Resiliency
 open PayrollCalculus
-open PayrollCalculus.Worker.MessagingPipeline
 open PayrollCalculus.PublishedLanguage
 open PayrollCalculus.Infra
-open Interpreter
 open CommandHandler
 open PayrollCalculus.Infra.DataAccess
+open NBB.Core.Abstractions
+open NBB.Core.Effects.FSharp
 
 [<EntryPoint>]
 let main argv =
@@ -40,25 +40,23 @@ let main argv =
 
         let payrollConnString = context.Configuration.GetConnectionString "PayrollCalculus"
 
-        services.AddScoped<CommandHandler>(Func<IServiceProvider, CommandHandler>(fun _sp -> 
-            createCommandHandler [
+        let applicationPipeline = 
+            let commandHandler = createCommandHandler [
                 Application.AddDbElemDefinition.handler |> toCommandHandlerReg
             ]
-        )) |> ignore
 
-        services.AddSingleton<IInterpreter>(fun sp ->
-                let publishHandler = PublishMessage.Handler(sp.GetRequiredService<NBB.Messaging.Abstractions.IMessageBusPublisher>())
-                let publish = publishHandler.Handle >> Async.AwaitTask >> Async.RunSynchronously >> (fun _unit -> Unit())
+            fun message ->
+                match box message with
+                | :? ICommand as command -> commandHandler command 
+                | _ -> failwith "Invalid message"
 
-                let interpreter = createInterpreter [
-                    publish |> toHandlerReg
-                    ElemDefinitionStoreRepo.loadCurrent payrollConnString |> toHandlerReg
-                    ElemDefinitionStoreRepo.save payrollConnString |> toHandlerReg
-                    Common.handleException |> toHandlerReg
-                ]
-
-                interpreter :> IInterpreter
-            ) |> ignore
+        services.AddEffects() |> ignore
+        services.AddMessagingEffects() |> ignore
+        services
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.loadCurrent payrollConnString)
+            .AddSideEffectHandler(ElemDefinitionStoreRepo.save payrollConnString)
+            .AddSideEffectHandler(Common.handleException)
+            |> ignore;
 
         services.AddResiliency() |> ignore
         services.AddNatsMessaging() |> ignore
@@ -71,7 +69,7 @@ let main argv =
                         .UseCorrelationMiddleware()
                         .UseExceptionHandlingMiddleware()
                         .UseDefaultResiliencyMiddleware()
-                        .UseMiddleware<CommandMiddleware>()
+                        .UseEffectMiddleware(fun m -> m |> applicationPipeline |> Effect.unWrap |> EffectExtensions.ToUnit)
                         |> ignore
                 )
             |> ignore

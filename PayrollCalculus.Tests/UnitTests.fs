@@ -7,6 +7,7 @@ open PayrollCalculus.Domain
 
 open FsUnit.Xunit
 open NBB.Core.Effects.FSharp
+open System.Threading.Tasks
 
 module Handlers =
 
@@ -21,16 +22,17 @@ module Handlers =
         interface ISideEffectHandler 
         member _.Handle(sideEffect: obj, _ : CancellationToken) =
            match (sideEffect) with
-                | :? LoadSideEffect as lse -> dbHandler(lse) :> obj
-                | :? ParseFormulaSideEffect as pfe -> formulaHandler (pfe) :> obj
+                | :? LoadSideEffect as lse -> dbHandler(lse) :> obj 
+                | :? ParseFormulaSideEffect as pfe -> formulaHandler (pfe) :> obj 
                 | _ -> failwith "Unhandled side effect"
 
-    let getHandlerFactory (dbHandler, formulaHandler)  =
-        { new ISideEffectHandlerFactory with
-            member this.GetSideEffectHandlerFor<'TOutput> (_: ISideEffect<'TOutput>) = 
-               SideEffectHandlerWrapper(new GenericSideEffectHandler(dbHandler, formulaHandler)) :> ISideEffectHandler<ISideEffect<'TOutput>, 'TOutput>
+    let getSideEffectMediator (dbHandler, formulaHandler)  =
+        { new ISideEffectMediator with
+            member this.Run<'TOutput> (sideEffect: ISideEffect<'TOutput>, cancellationToken) = 
+                match sideEffect with
+                | :? Thunk.SideEffect<'TOutput> as tse ->  tse.ImpureFn.Invoke(cancellationToken)
+                | _ -> GenericSideEffectHandler(dbHandler, formulaHandler).Handle(sideEffect, cancellationToken) :?> 'TOutput |> Task.FromResult
         }
-
 
 [<Fact>]
 let ``It shoud evaluate data access element`` () =
@@ -44,7 +46,7 @@ let ``It shoud evaluate data access element`` () =
 
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
 
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {Func= (fun _ -> (1:>obj)); Parameters= []}))
+    let factory = Handlers.getSideEffectMediator((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {Func= (fun _ -> (1:>obj)); Parameters= []}))
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
@@ -76,7 +78,7 @@ let ``It shoud evaluate formula without params`` () =
 
     let ctx: ComputationCtx = {PersonId = PersonId (Guid.NewGuid()); YearMonth = {Year = 2009; Month = 1}}
 
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {Func= (fun _ -> (3 :> obj)); Parameters= []}))
+    let factory = Handlers.getSideEffectMediator((fun _ -> Result.Ok (1:> obj)) , (fun _ -> {Func= (fun _ -> (3 :> obj)); Parameters= []}))
     let interpreter = NBB.Core.Effects.Interpreter(factory)
 
     let eff = effect {
@@ -130,8 +132,8 @@ let ``It shoud evaluate formula with params`` () =
             }
         | _ -> {Func= (fun _ -> (1:>obj)); Parameters= []}
 
-    let factory = Handlers.getHandlerFactory((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
-    let interpreter = NBB.Core.Effects.Interpreter(factory)
+    let sideEffectMediator = Handlers.getSideEffectMediator((fun _ -> Result.Ok (4m:> obj)) , formulaHandler)
+    let interpreter = NBB.Core.Effects.Interpreter(sideEffectMediator)
 
     let eff = effect {
         let! elemDefinitionStore = loadElemDefinitions ()
